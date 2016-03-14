@@ -1,0 +1,8 @@
+#!/bin/bash
+
+if [[ $(pkg-config --exists openssl; echo $?) -eq 1 ]]; then
+	echo 'missing openssl library'
+fi
+
+mkdir -p /tmp/skul
+mkdir -p tests
