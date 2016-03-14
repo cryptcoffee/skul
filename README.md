@@ -44,9 +44,3 @@ $ ./skul ./my_dump
 ```
 
 You can configure Skul thruogh its configuration file `conf/skul.cfg`
-
-##Future improvings
-We are working on:
-
-* GPU-based implementation
-* Password masking techniques to reduce the set of passwords in bruteforce mode
