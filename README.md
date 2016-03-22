@@ -41,7 +41,7 @@ $ ./skul disks/test_disk_py
 ```
 To test your own disk you need to dump the LUKS header of the partition:
 
-```bash
+```
 # dd if=/dev/sdX of=./my_dump bs=1024 count=3072
 ```
 Then you can run:
