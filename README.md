@@ -11,6 +11,8 @@
 ## Introduction
 Skul is a PoC to bruteforce the Cryptsetup implementation of Linux Unified Key Setup (LUKS).
 
+Read about it [here](http://crypt.coffee/research/luks.html).
+
 ## Features
 Most relevant features included in this release:
 
@@ -24,21 +26,26 @@ Most relevant features included in this release:
 To run Skul the OpenSSL library is required.
 
 ## Build Skul
+
 ```bash
 $ ./configure 
 $ make skul 
 ```
 
+
 ## Usage
 To test Skul we provide an example header of cryptsetup's encrypted disks:
+
 ```bash
 $ ./skul disks/test_disk_py 
 ```
 To test your own disk you need to dump the LUKS header of the partition:
+
 ```bash
-\# dd if=/dev/sdX of=./my_dump bs=1024 count=3072
+# dd if=/dev/sdX of=./my_dump bs=1024 count=3072
 ```
 Then you can run:
+
 ```bash
 $ ./skul ./my_dump
 ```
