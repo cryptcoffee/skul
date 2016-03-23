@@ -28,9 +28,15 @@
 #define _UTILS_H_
 
 #include <stdint.h>
+void print_format(unsigned long val);
+void print_time(unsigned long sec);
 int errprint(const char *format, ...);
 int dbgprint(int debug, const char *format, ...);
 uint32_t l2bEndian(uint32_t num);
 void display_art();
+void display_art_nosleep();
+void print_help();
+
+
 
 #endif

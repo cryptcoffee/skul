@@ -57,7 +57,7 @@ int read_cfg(usrp *UP){
 		count++;
 		if((line[0]!='#')&&(line[0]!='\0')&&(n<=10)){
 			if((i=sscanf(line,"%s %d",par, &val))<2){
-				fprintf(stderr,"conf/skul.cfg error: value not set on line %d\n",count);
+				fprintf(stderr,"skul: skul.cfg error: value not set on line %d\n",count);
 				return 0;
 			}
 			par[7]='\0';
@@ -78,7 +78,7 @@ int read_cfg(usrp *UP){
 			}else if(memcmp(par,"PRG_BAR",7)==0){
 				UP->PRG_BAR=val;
 			}else{
-				fprintf(stderr,"conf/skul.cfg error: invalid line %d\n",count);
+				fprintf(stderr,"skul: skul.cfg error: invalid line %d\n",count);
 				fclose(conf);
 				return 0;
 			}

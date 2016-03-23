@@ -45,6 +45,7 @@
 #include <math.h>
 #include <signal.h>
 #include <sys/time.h>
+#include <getopt.h>
 
 #define DEBUG 0
 #define LOG 0
@@ -62,15 +63,35 @@ int main(int argc, char **argv){
 	int iv_mode, chain_mode,i,set_len,num,j,c, mod;
 	int slot[8], slot_order[8];
 	usrp UP;
+	struct timeval t0,t1;
+	unsigned long sec;
 
 	set = NULL;
 	
 	/* check arguments */
 	if(!(argv[1])){
-		errprint("insert file name\n");
+		print_help();
 		exit(EXIT_FAILURE);
 	}
 	path = argv[1];
+
+	while (1) {
+		char c;
+		
+		c = getopt(argc, argv, "h");
+		if (c == -1) {
+			break;
+		}
+		switch (c) {
+			case 'h':
+				print_help();
+				exit(EXIT_FAILURE);
+			case '?':
+			default:
+				print_help();
+				exit(EXIT_FAILURE);
+		}
+	}
 
 	/* read configuration file */
 	if(!read_cfg(&UP)){
@@ -87,15 +108,15 @@ int main(int argc, char **argv){
 		exit(EXIT_FAILURE);
 	}
 
-	if(UP.SEL_MOD==0){
-		system("clear");
-	}else{
+	system("clear");
+	display_art();
+
+	if(UP.SEL_MOD!=0){
 		print_header(&header);
 		printf("\nATTACKING KEYSLOTS:\n\n");
 		print_keyslot(&header,0);
 		printf("\n");
 	}
-/*	display_art();*/
 
 	/* Default */
 	for(i=0,c=0;i<8;i++){
@@ -118,10 +139,26 @@ int main(int argc, char **argv){
 	OpenSSL_add_all_algorithms();
 	OpenSSL_add_all_ciphers();
 
+	printf("Threads:     %d\n", UP.NUM_THR);
+	if(UP.FST_CHK)
+		printf("Fast check:  Enabled\n");
+	else
+		printf("Fast check:  Disabled\n");
+
 	switch(mod){
 		
 		case 1: /* bruteforce */
+			printf("Attack mode: Bruteforce\n\n");
+			printf("Min len:     %d characters\n", UP.MIN_LEN);
+			printf("Max len:     %d characters\n", UP.MAX_LEN);
+			printf("Alphabet:    %d\n\n", UP.ALP_SET);
+			printf("Press enter to start cracking!");
+			getchar();
+			printf("\n");
+
 			set = init_set(&set_len,UP.ALP_SET); 
+			/* START GLOBAL TIMER */
+			gettimeofday(&t0,NULL);
 			for(j=0;j<num;j++){
 				for(i=UP.MIN_LEN;i<=UP.MAX_LEN;i++){
 					if(bruteforce(i, set, set_len, &header, iv_mode, 
@@ -134,6 +171,11 @@ int main(int argc, char **argv){
 			break;
 
 		case 2: /* pwlist */
+			printf("Attack mode: Password List\n\n");
+			printf("Press enter to start cracking!");
+			getchar();
+			printf("\n");
+
 			for(j=0;j<num;j++){
 				pwlist(&header, iv_mode, chain_mode, &encrypted, crypt_disk,
 						slot_order[j],UP.NUM_THR,UP.FST_CHK,UP.PRG_BAR);
@@ -142,6 +184,15 @@ int main(int argc, char **argv){
 
 		case 3:
 			/* first call pwlist */
+			printf("Attack mode: Password List first, then Bruteforce\n\n");
+			printf("Settings for Bruteforce:\n");
+			printf("Min len:     %d characters\n", UP.MIN_LEN);
+			printf("Max len:     %d characters\n", UP.MAX_LEN);
+			printf("Alphabet:    %d\n\n", UP.ALP_SET);
+			printf("Press enter to start cracking!");
+			getchar();
+			printf("\n");
+
 			for(j=0;j<num;j++){
 				if(!pwlist(&header, iv_mode, chain_mode, &encrypted, crypt_disk,
 							slot_order[j],UP.NUM_THR,UP.FST_CHK,UP.PRG_BAR)){
@@ -159,10 +210,16 @@ int main(int argc, char **argv){
 			break;
 
 		default:
-			printf("invalid\n");
+			errprint("Invalid Attack Mode\n");
 			break;
 
 	}
+
+	/* STOP GLOBAL TIMER */
+	gettimeofday(&t1,NULL);
+	sec=t1.tv_sec-t0.tv_sec;
+	printf("TOTAL TIME: ");
+	print_time(sec);
 
 	/* free memory */
 	EVP_cleanup();
@@ -187,6 +244,7 @@ int interface_selection(pheader *header,int *slot,int *slot_order,int *tot, int 
 	while(continua){
 
 		system("clear");
+		display_art_nosleep();
 		print_header(header);
 		printf("\nACTIVE KEYSLOTS:\n\n");
 		num_slot=0;
@@ -235,6 +293,7 @@ int interface_selection(pheader *header,int *slot,int *slot_order,int *tot, int 
 
 		if(key_sel){
 			system("clear");
+			display_art_nosleep();
 			print_header(header);
 			printf("\nSELECTED KEYSLOTS: %d\n\n", num_slot);
 			for(i=0;i<num_slot;i++){
@@ -244,6 +303,7 @@ int interface_selection(pheader *header,int *slot,int *slot_order,int *tot, int 
 		}
 		else{
 			system("clear");
+			display_art_nosleep();
 			print_header(header);
 			printf("\nACTIVE KEYSLOTS:\n\n");
 			for(i=0;i<8;i++){

@@ -233,7 +233,11 @@ int bruteforce(int len, char *set,
 		}
 		printf("Tried: %d passwords - ",tot);
 	}
-	printf("TIME: %ld sec\n\n", sec);
+	if(!found){
+		printf("Time: ");
+		print_time(sec);
+		printf("\n");
+	}
 
 
 	pthread_attr_destroy(&attr);
@@ -379,7 +383,11 @@ int pwlist(pheader *header, int iv_mode, int chain_mode,
 		}
 		printf("Tried: %d - ",tot);
 	}
-	printf("TIME: %ld sec\n\n", sec);
+	if(!found){
+		printf("Time: ");
+		print_time(sec);
+		printf("\n");
+	}
 
 
 	pthread_attr_destroy(&attr);

@@ -31,6 +31,32 @@
 #include <stdarg.h>
 #include <unistd.h>
 
+void print_help(){
+	printf("Usage: skul [-h] <filename>\n");
+}
+
+void print_format(unsigned long val){
+	if(val==0)
+		printf("00");
+	else if(val<10)
+		printf("0%d",(int)val);
+	else
+		printf("%ld",val);
+}
+
+void print_time(unsigned long sec){
+	const unsigned int SECONDS_IN_AN_HOUR = 3600; 
+	const unsigned int SECONDS_IN_A_MINUTE = 60;
+
+	print_format((unsigned long)(sec/SECONDS_IN_AN_HOUR));
+	printf(":");
+	print_format((unsigned long)((sec%SECONDS_IN_AN_HOUR)/SECONDS_IN_A_MINUTE));
+	printf(":");
+	print_format((unsigned long)((sec%SECONDS_IN_AN_HOUR)%SECONDS_IN_A_MINUTE));
+	printf("\n");
+
+}
+
 int errprint(const char *format, ...){
 
 	va_list arg;
@@ -75,24 +101,42 @@ return res;
 
 void display_art(){
 
+	int sleeptime=25000;
 	printf("\n");
-	printf(" ██▓     █    ██  ▄████▄   ██▓ ██▓███   ██░ ██ ▓█████  ██▀███  \n");
-	usleep(500000);
-	printf("▓██▒     ██  ▓██▒▒██▀ ▀█  ▓██▒▓██░  ██▒▓██░ ██▒▓█   ▀ ▓██ ▒ ██▒\n");
-	usleep(500000);
-	printf("▒██░    ▓██  ▒██░▒▓█    ▄ ▒██▒▓██░ ██▓▒▒██▀▀██░▒███   ▓██ ░▄█ ▒\n");
-	usleep(500000);
-	printf("▒██░    ▓▓█  ░██░▒▓▓▄ ▄██▒░██░▒██▄█▓▒ ▒░▓█ ░██ ▒▓█  ▄ ▒██▀▀█▄  \n");
-	usleep(500000);
-	printf("░██████▒▒▒█████▓ ▒ ▓███▀ ░░██░▒██▒ ░  ░░▓█▒░██▓░▒████▒░██▓ ▒██▒\n");
-	usleep(500000);
-	printf("░ ▒░▓  ░░▒▓▒ ▒ ▒ ░ ░▒ ▒  ░░▓  ▒▓▒░ ░  ░ ▒ ░░▒░▒░░ ▒░ ░░ ▒▓ ░▒▓░\n");
-	usleep(500000);
-	printf("░ ░ ▒  ░░░▒░ ░ ░   ░  ▒    ▒ ░░▒ ░      ▒ ░▒░ ░ ░ ░  ░  ░▒ ░ ▒░\n");
-	usleep(500000);
-	printf("  ░ ░    ░░░ ░ ░ ░         ▒ ░░░        ░  ░░ ░   ░     ░░   ░ \n");
-	usleep(500000);
-	printf("    ░  ░   ░     ░ ░       ░            ░  ░  ░   ░  ░   ░     \n");
+	printf("         --[ CRYPTCOFFEE ]--");
+	printf("\n\n");
+	printf("      ██████  ██ ▄█▀ █    ██  ██▓    \n");
+	usleep(sleeptime);
+	printf("    ▒██    ▒  ██▄█▒  ██  ▓██▒▓██▒    \n");
+	usleep(sleeptime);
+	printf("    ░ ▓██▄   ▓███▄░ ▓██  ▒██░▒██░    \n");
+	usleep(sleeptime);
+	printf("      ▒   ██▒▓██ █▄ ▓▓█  ░██░▒██░    \n");
+	usleep(sleeptime);
+	printf("    ▒██████▒▒▒██▒ █▄▒▒█████▓ ░██████▒\n");
+	usleep(sleeptime);
+	printf("    ▒ ▒▓▒ ▒ ░▒ ▒▒ ▓▒░▒▓▒ ▒ ▒ ░ ▒░▓  ░\n");
+	usleep(sleeptime);
+	printf("    ░ ░▒  ░ ░░ ░▒ ▒░░░▒░ ░ ░ ░ ░ ▒  ░\n");
+	usleep(sleeptime);
+	printf("    ░  ░  ░  ░ ░░ ░  ░░░ ░ ░   ░ ░   \n");
+	usleep(sleeptime);
+	printf("          ░  ░  ░      ░         ░  ░\n");
 	usleep(800000);
 	printf("\n");
+}
+
+void display_art_nosleep(){
+	printf("\n");
+	printf("      ██████  ██ ▄█▀ █    ██  ██▓    \n");
+	printf("    ▒██    ▒  ██▄█▒  ██  ▓██▒▓██▒    \n");
+	printf("    ░ ▓██▄   ▓███▄░ ▓██  ▒██░▒██░    \n");
+	printf("      ▒   ██▒▓██ █▄ ▓▓█  ░██░▒██░    \n");
+	printf("    ▒██████▒▒▒██▒ █▄▒▒█████▓ ░██████▒\n");
+	printf("    ▒ ▒▓▒ ▒ ░▒ ▒▒ ▓▒░▒▓▒ ▒ ▒ ░ ▒░▓  ░\n");
+	printf("    ░ ░▒  ░ ░░ ░▒ ▒░░░▒░ ░ ░ ░ ░ ▒  ░\n");
+	printf("    ░  ░  ░  ░ ░░ ░  ░░░ ░ ░   ░ ░   \n");
+	printf("          ░  ░  ░      ░         ░  ░\n");
+	printf("\n");
+
 }
