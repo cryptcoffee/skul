@@ -25,6 +25,7 @@
 
 
 #include "thread.h"
+#include "../src/skul.h"
 #include "alloclib.h"
 #include "utils.h"
 #include <sys/time.h>
@@ -33,8 +34,6 @@
 #include <string.h>
 #include <stdlib.h>
 #include <unistd.h>
-
-//#define TESTING
 
 char *init_set(int *set_len, int id_set){
 

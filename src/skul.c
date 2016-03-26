@@ -47,12 +47,12 @@
 #include <sys/time.h>
 #include <getopt.h>
 
-int TESTING = 0;
+/*int TESTING = 1;
 int SKUL_MAJOR = 0;
 int SKUL_MINOR = 2;
 int DEBUG = 0;
 int LOG = 0;
-
+*/
 
 int interface_selection(pheader *header,int *slot,int *slot_order, int *tot, 
 		int key_sel);
