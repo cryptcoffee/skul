@@ -23,8 +23,8 @@
  */
 
 
-
 #define _DEFAULT_SOURCE
+#include "../src/skul.h"
 #include <stdio.h>
 #include <stdint.h>
 #include <sys/types.h>
@@ -32,7 +32,37 @@
 #include <unistd.h>
 
 void print_help(){
-	printf("Usage: skul [-h] <filename>\n");
+	printf("Cryptcoffee - Skul %d.%d\n", SKUL_MAJOR, SKUL_MINOR);
+	printf("A PoC to bruteforce the Cryptsetup implementation of Linux Unified Key Setup (LUKS).\n");
+	printf("See http://crypt.coffee/research/luks.html for more information.\n\n");
+	printf("Usage: skul [-h] [-v] <filename>\n\n");
+	printf("Options:\n");
+	printf("   -h\tdisplay this help text and exit\n");
+	printf("   -v\tdisplay version information and exit\n\n");
+	printf("Filename:\n");
+	printf("   The name of the file containing the LUKS encrypted partition.\n");
+	printf("   For testing purposes Skul comes with an example cryptsetup's encrypted\n");
+	printf("   partition header in the `disks/` directory.\n");
+	printf("   To test your own disk you first need to dump the LUKS header of the partition:\n");
+	printf("      # dd if=/dev/sdX of=./my_dump bs=1024 count=3072\n");
+	printf("      # chown myusr:myusr ./my_dump\n");
+	printf("   Then you can run:\n");
+	printf("      $ skul ./my_dump\n\n");
+	printf("Configuring Skul:\n");
+	printf("   You can configure Skul through it's configuration file `conf/skul.cfg`\n\n");
+	printf("** For BlackArch Linux users:\n");
+	printf("   You can find the Skul directory at `/usr/share/skul`\n\n");
+	printf("Report bugs to sha@crypt.coffee\n");
+	printf("Cryptcoffee Skul home page: https://github.com/cryptcoffee/skul\n");
+}
+
+void print_small_help(){
+	printf("Usage: skul [-h] [-v] <filename>\n");
+	printf("Try 'skul -h' for more information.\n");
+}
+
+void print_version(){
+	printf("Cryptcoffee - Skul %d.%d\n", SKUL_MAJOR, SKUL_MINOR);
 }
 
 void print_format(unsigned long val){
@@ -99,44 +129,38 @@ res = b0 | b1 | b2 | b3;
 return res;
 }
 
-void display_art(){
-
-	int sleeptime=25000;
+void print_art(int roundsleep, int finalsleep){
+	
 	printf("\n");
 	printf("         --[ CRYPTCOFFEE ]--");
 	printf("\n\n");
+	usleep(roundsleep);
 	printf("      ██████  ██ ▄█▀ █    ██  ██▓    \n");
-	usleep(sleeptime);
+	usleep(roundsleep);
 	printf("    ▒██    ▒  ██▄█▒  ██  ▓██▒▓██▒    \n");
-	usleep(sleeptime);
+	usleep(roundsleep);
 	printf("    ░ ▓██▄   ▓███▄░ ▓██  ▒██░▒██░    \n");
-	usleep(sleeptime);
+	usleep(roundsleep);
 	printf("      ▒   ██▒▓██ █▄ ▓▓█  ░██░▒██░    \n");
-	usleep(sleeptime);
+	usleep(roundsleep);
 	printf("    ▒██████▒▒▒██▒ █▄▒▒█████▓ ░██████▒\n");
-	usleep(sleeptime);
+	usleep(roundsleep);
 	printf("    ▒ ▒▓▒ ▒ ░▒ ▒▒ ▓▒░▒▓▒ ▒ ▒ ░ ▒░▓  ░\n");
-	usleep(sleeptime);
+	usleep(roundsleep);
 	printf("    ░ ░▒  ░ ░░ ░▒ ▒░░░▒░ ░ ░ ░ ░ ▒  ░\n");
-	usleep(sleeptime);
+	usleep(roundsleep);
 	printf("    ░  ░  ░  ░ ░░ ░  ░░░ ░ ░   ░ ░   \n");
-	usleep(sleeptime);
+	usleep(roundsleep);
 	printf("          ░  ░  ░      ░         ░  ░\n");
-	usleep(800000);
+	usleep(finalsleep);
 	printf("\n");
+
+}
+
+void display_art(){
+	print_art(25000, 800000);
 }
 
 void display_art_nosleep(){
-	printf("\n");
-	printf("      ██████  ██ ▄█▀ █    ██  ██▓    \n");
-	printf("    ▒██    ▒  ██▄█▒  ██  ▓██▒▓██▒    \n");
-	printf("    ░ ▓██▄   ▓███▄░ ▓██  ▒██░▒██░    \n");
-	printf("      ▒   ██▒▓██ █▄ ▓▓█  ░██░▒██░    \n");
-	printf("    ▒██████▒▒▒██▒ █▄▒▒█████▓ ░██████▒\n");
-	printf("    ▒ ▒▓▒ ▒ ░▒ ▒▒ ▓▒░▒▓▒ ▒ ▒ ░ ▒░▓  ░\n");
-	printf("    ░ ░▒  ░ ░░ ░▒ ▒░░░▒░ ░ ░ ░ ░ ▒  ░\n");
-	printf("    ░  ░  ░  ░ ░░ ░  ░░░ ░ ░   ░ ░   \n");
-	printf("          ░  ░  ░      ░         ░  ░\n");
-	printf("\n");
-
+	print_art(0,0);	
 }

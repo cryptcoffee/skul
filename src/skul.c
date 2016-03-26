@@ -47,9 +47,12 @@
 #include <sys/time.h>
 #include <getopt.h>
 
-#define DEBUG 0
-#define LOG 0
-//#define TESTING
+int TESTING = 0;
+int SKUL_MAJOR = 0;
+int SKUL_MINOR = 2;
+int DEBUG = 0;
+int LOG = 0;
+
 
 int interface_selection(pheader *header,int *slot,int *slot_order, int *tot, 
 		int key_sel);
@@ -70,7 +73,7 @@ int main(int argc, char **argv){
 	
 	/* check arguments */
 	if(!(argv[1])){
-		print_help();
+		print_small_help();
 		exit(EXIT_FAILURE);
 	}
 	path = argv[1];
@@ -78,17 +81,20 @@ int main(int argc, char **argv){
 	while (1) {
 		char c;
 		
-		c = getopt(argc, argv, "h");
+		c = getopt(argc, argv, "hv");
 		if (c == -1) {
 			break;
 		}
 		switch (c) {
 			case 'h':
 				print_help();
-				exit(EXIT_FAILURE);
+				return 0;
+			case 'v':
+				print_version();
+				return 0;
 			case '?':
 			default:
-				print_help();
+				print_small_help();
 				exit(EXIT_FAILURE);
 		}
 	}

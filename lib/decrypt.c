@@ -39,10 +39,10 @@
 #include "af.h"
 #include "decrypt.h"
 #include "skulfs.h"
+#include "../src/skul.h"
 
 #include "fastpbkdf2.h"
 
-#define DEBUG 0
 
 int decrypt(int mode, unsigned char *key, unsigned char *encryptedData, 
 		int encryptedLength,unsigned int *length, 

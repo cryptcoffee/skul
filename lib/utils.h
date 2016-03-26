@@ -36,7 +36,7 @@ uint32_t l2bEndian(uint32_t num);
 void display_art();
 void display_art_nosleep();
 void print_help();
-
-
+void print_version();
+void print_small_help();
 
 #endif
