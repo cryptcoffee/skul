@@ -259,7 +259,7 @@ int th_control(int max_l, int count, pthread_t *threads, int num_th,
 		}
 
 		if(win_pwd[0]!='\0'){
-			printf("\n\nPassword found!!\nThe password is: %s\n\n",win_pwd);
+			printf("\n\nPassword found!!\nKeyslot: %d\nThe password is: %s\n\n",keyslot,win_pwd);
 			return 1;
 		}		
 

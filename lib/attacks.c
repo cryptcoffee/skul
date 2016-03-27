@@ -25,6 +25,7 @@
 
 
 #include "thread.h"
+#include "../src/skul.h"
 #include "alloclib.h"
 #include "utils.h"
 #include <sys/time.h>
@@ -33,8 +34,6 @@
 #include <string.h>
 #include <stdlib.h>
 #include <unistd.h>
-
-//#define TESTING
 
 char *init_set(int *set_len, int id_set){
 
@@ -233,7 +232,11 @@ int bruteforce(int len, char *set,
 		}
 		printf("Tried: %d passwords - ",tot);
 	}
-	printf("TIME: %ld sec\n\n", sec);
+	if(!found){
+		printf("Time: ");
+		print_time(sec);
+		printf("\n");
+	}
 
 
 	pthread_attr_destroy(&attr);
@@ -379,7 +382,11 @@ int pwlist(pheader *header, int iv_mode, int chain_mode,
 		}
 		printf("Tried: %d - ",tot);
 	}
-	printf("TIME: %ld sec\n\n", sec);
+	if(!found){
+		printf("Time: ");
+		print_time(sec);
+		printf("\n");
+	}
 
 
 	pthread_attr_destroy(&attr);

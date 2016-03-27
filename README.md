@@ -43,6 +43,7 @@ To test your own disk you need to dump the LUKS header of the partition:
 
 ```
 # dd if=/dev/sdX of=./my_dump bs=1024 count=3072
+# chmod myusr:myusr ./my_dump
 ```
 Then you can run:
 
