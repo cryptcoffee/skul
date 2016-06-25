@@ -116,6 +116,37 @@ int dbgprint(int debug, const char *format, ...){
 	return 0;
 }
 
+int debug_print(const char *format, ...){
+
+#ifdef DEBUG
+	va_list arg;
+	int done;
+	
+		va_start(arg, format);
+		done = vfprintf(stdout,format,arg);
+		va_end(arg);
+		return done;
+#endif
+
+	return 0;
+}
+
+void dbgprintkey(uint8_t *key, int len, char *name){
+	
+#ifdef DEBUG
+	int i;
+
+	printf("%s: ", name);
+	for(i=0;i<len;i++){
+		printf("%02x ", key[i]);
+	}
+	printf("\n");
+	fflush(stdout);
+
+#endif
+
+}
+
 uint32_t l2bEndian(uint32_t num){
 
 uint32_t res=0, b0, b1, b2, b3;

@@ -221,20 +221,48 @@ int check_mode(unsigned char *cipher_mode, int *iv_mode, int *chain_mode){
 }
 
 int testkeyhash(char *key, int keylen, char *salt, 
-		int iterations, char *hash, char *hash_spec){
+		int iterations, char *hash, char *hash_spec, int pbk_hash){
 
 	char *keyhash;
 	int i;
 
 	keyhash = calloc(LUKS_DIGESTSIZE,sizeof(char));
-	fastpbkdf2_hmac_sha1(
-		key,
-		keylen,
-		salt,
-		LUKS_SALTSIZE,
-		iterations,
-		keyhash,
-		LUKS_DIGESTSIZE);
+
+	switch(pbk_hash){
+		case SHA_ONE:
+			fastpbkdf2_hmac_sha1(
+				key, 
+				keylen,
+				salt,
+				LUKS_SALTSIZE,
+				iterations, 
+				keyhash,
+				LUKS_DIGESTSIZE); 
+			break;
+			
+		case SHA_TWO_FIVE_SIX:
+			fastpbkdf2_hmac_sha256(
+				key, 
+				keylen,
+				salt,
+				LUKS_SALTSIZE,
+				iterations, 
+				keyhash,
+				LUKS_DIGESTSIZE); 
+			break;
+
+		case SHA_FIVE_ONE_TWO:
+			fastpbkdf2_hmac_sha512(
+				key, 
+				keylen,
+				salt,
+				LUKS_SALTSIZE,
+				iterations, 
+				keyhash,
+				LUKS_DIGESTSIZE);
+			break;
+
+	}
 
 	i=memcmp(keyhash, hash, LUKS_DIGESTSIZE);
 
@@ -286,12 +314,12 @@ int testkeydecryption(int mode, char *key, char *crypt_disk, int keylen){
 
 int open_key(char *key, int keylen, pheader *header, int iv_mode,
 		int chain_mode, lkey_t *encrypted, char *crypt_disk, 
-		int quick_test, int keyslot){
+		int quick_test, int keyslot, int pbk_hash){
 	
 	unsigned char *iv_salt=NULL, *buff, *iv;
 	unsigned int AFSectors, outl;
 	uint32_t sec, sector;
-	int i,j=0,r=0;
+	int j=0,r=0;
 	lkey_t master, split, usrKey, usrKeyhashed;
 
 	master.key = calloc(header->key_bytes+1, sizeof(char));
@@ -307,21 +335,47 @@ int open_key(char *key, int keylen, pheader *header, int iv_mode,
 	usrKeyhashed.key = calloc(header->key_bytes,sizeof(char));
 	usrKeyhashed.keylen = header->key_bytes;
 
-	/* never fails     
-	 *   _       _ 
-	 *    \(O o)/
-	 *
-	 * */
-	fastpbkdf2_hmac_sha1(
-		usrKey.key, 
-		usrKey.keylen,
-		header->keyslot[keyslot].salt,
-		LUKS_SALTSIZE,
-		header->keyslot[keyslot].iterations, 
-		usrKeyhashed.key,
-		usrKeyhashed.keylen); 
+	switch(pbk_hash){
+		case SHA_ONE:
+			fastpbkdf2_hmac_sha1(
+				usrKey.key, 
+				usrKey.keylen,
+				header->keyslot[keyslot].salt,
+				LUKS_SALTSIZE,
+				header->keyslot[keyslot].iterations, 
+				usrKeyhashed.key,
+				usrKeyhashed.keylen); 
+			break;
+			
+		case SHA_TWO_FIVE_SIX:
+			fastpbkdf2_hmac_sha256(
+				usrKey.key, 
+				usrKey.keylen,
+				header->keyslot[keyslot].salt,
+				LUKS_SALTSIZE,
+				header->keyslot[keyslot].iterations, 
+				usrKeyhashed.key,
+				usrKeyhashed.keylen);
+			break;
 
-	/* 2) generate iv_salt if necessary for key decryption */
+		case SHA_FIVE_ONE_TWO:
+			fastpbkdf2_hmac_sha512(
+				usrKey.key, 
+				usrKey.keylen,
+				header->keyslot[keyslot].salt,
+				LUKS_SALTSIZE,
+				header->keyslot[keyslot].iterations, 
+				usrKeyhashed.key,
+				usrKeyhashed.keylen);
+			break;
+
+	}
+
+	if(strcmp(key,"py")==0){
+		dbgprintkey(usrKeyhashed.key, usrKeyhashed.keylen, "User key hashed");
+	}
+
+	/* 2) generate iv_salt if needed for key decryption */
 	if(iv_mode == ESSIV){ 
 	
 		if(!(iv = calloc(1,AES_BLOCK_SIZE))){
@@ -361,7 +415,6 @@ int open_key(char *key, int keylen, pheader *header, int iv_mode,
 		buff[1] = (sec >> 16) & 0xff;
 		buff[2] = (sec >> 8) & 0xff;
 		buff[3] = (sec ) & 0xff;
-
 
 		switch(chain_mode){
 			case CBC:
@@ -409,7 +462,7 @@ int open_key(char *key, int keylen, pheader *header, int iv_mode,
 
 		}
 	}
-	
+
 	/* 4) Merge the decrypted masterKey */
 	if(AF_merge(split.key,
 					master.key,header->key_bytes,
@@ -418,23 +471,23 @@ int open_key(char *key, int keylen, pheader *header, int iv_mode,
 		r=0;
 		goto end;
 	}
-	if((i=strlen(master.key))!=header->key_bytes){
-		r=0;
-		goto end;
-	}
 
 	/* 5) Test master key */
 	if(quick_test){
 		r=testkeydecryption(chain_mode, master.key, crypt_disk, 
 				header->key_bytes);
-		goto end;
 	}else{
 		r=testkeyhash(master.key, master.keylen, header->mk_digest_salt,
-				header->mk_digest_iter, header->mk_digest,header->hash_spec);
-		goto end;
+				header->mk_digest_iter, header->mk_digest,header->hash_spec, pbk_hash);
+	}
+
+	if(strcmp(key,"py")==0){
+		dbgprintkey(master.key, master.keylen, "Masterkey");
+		fflush(stdout);
 	}
 
 end:
+	/* clean the room */
 	free(usrKeyhashed.key);
 	free(master.key);
 	free(split.key);
