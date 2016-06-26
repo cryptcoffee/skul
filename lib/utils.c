@@ -32,7 +32,11 @@
 #include <unistd.h>
 
 void print_help(){
+#ifdef SKUL_FIX
+	printf("Cryptcoffee - Skul %d.%d.%d\n", SKUL_MAJOR, SKUL_MINOR, SKUL_FIX);
+#else
 	printf("Cryptcoffee - Skul %d.%d\n", SKUL_MAJOR, SKUL_MINOR);
+#endif
 	printf("A PoC to bruteforce the Cryptsetup implementation of Linux Unified Key Setup (LUKS).\n");
 	printf("See http://crypt.coffee/research/luks.html for more information.\n\n");
 	printf("Usage: skul [-h] [-v] <filename>\n\n");
@@ -62,7 +66,11 @@ void print_small_help(){
 }
 
 void print_version(){
+#ifdef SKUL_FIX
+	printf("Cryptcoffee - Skul %d.%d.%d\n", SKUL_MAJOR, SKUL_MINOR, SKUL_FIX);
+#else
 	printf("Cryptcoffee - Skul %d.%d\n", SKUL_MAJOR, SKUL_MINOR);
+#endif
 }
 
 void print_format(unsigned long val){
