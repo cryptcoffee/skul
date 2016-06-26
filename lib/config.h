@@ -27,6 +27,8 @@
 #ifndef CONFIG_H
 #define CONFIG_H
 
+#define UNSET 99
+
 typedef struct usr_preferences{
 	int MIN_LEN;
 	int MAX_LEN;
@@ -38,6 +40,6 @@ typedef struct usr_preferences{
 	int PRG_BAR;
 }usrp;
 
-int read_cfg(usrp *UP);
+int read_cfg(usrp *UP, int threads, char *cfg_path, int mode, int fast);
 
 #endif

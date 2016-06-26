@@ -25,33 +25,43 @@
 
 
 #include "config.h"
+#include "utils.h"
 #include <string.h>
 #include <unistd.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include "alloclib.h"
 
-int read_cfg(usrp *UP){
+int read_cfg(usrp *UP, int threads, char *cfg_path, int mode, int fast){
 
 	FILE *conf;
 	char *line,par[10];
 	int count,i,val,n;
 
-	if(!(conf = fopen("conf/skul.cfg","r"))){
-		if(!(conf = fopen("../conf/skul.cfg","r"))){
-			perror("fopen");
+	if(cfg_path){
+		if(!(conf = fopen(cfg_path,"r"))){
+			errprint("cannot open specified configuration file: %s\n",cfg_path);
 			return 0;
 		}
+	}else{
+		if(!(conf = fopen("conf/skul.cfg","r"))){
+			if(!(conf = fopen("../conf/skul.cfg","r"))){
+				errprint("configuration file not found\n");
+				return 0;
+			}
+		}
 	}
+
 	/* default */
 	UP->MIN_LEN=2;
 	UP->MAX_LEN=16;
-	UP->NUM_THR=1;
+	UP->NUM_THR=8;
 	UP->ALP_SET=1;
 	UP->FST_CHK=1;
 	UP->KEY_SEL=0;
-	UP->SEL_MOD=1;
+	UP->SEL_MOD=3;
 
+	/* reading configuration file */
 	count = 0;
 	while((line = readline(conf,&n))){
 		count++;
@@ -85,6 +95,17 @@ int read_cfg(usrp *UP){
 		}
 		free(line);
 		line=NULL;
+	}
+
+	/* Override with specified cmdline options */
+	if(threads){
+		UP->NUM_THR=threads;
+	}
+	if(mode!=UNSET){
+		UP->SEL_MOD=mode;
+	}
+	if(fast!=UNSET){
+		UP->FST_CHK=fast;
 	}
 
 	fclose(conf);

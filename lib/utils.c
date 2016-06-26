@@ -39,11 +39,21 @@ void print_help(){
 #endif
 	printf("A PoC to bruteforce the Cryptsetup implementation of Linux Unified Key Setup (LUKS).\n");
 	printf("See http://crypt.coffee/research/luks.html for more information.\n\n");
-	printf("Usage: skul [-h] [-v] <filename>\n\n");
+	printf("Usage: skul [options] <filename>\n\n");
 	printf("Options:\n");
-	printf("   -h\tdisplay this help text and exit\n");
-	printf("   -v\tdisplay version information and exit\n\n");
-	printf("Filename:\n");
+	printf("   -h: display this help text and exit\n");
+	printf("   -v: display version information and exit\n");
+	printf("   -m MODE: use MODE as the attack mode\n");
+	printf("   -t NUM: use NUM threads\n");
+	printf("   -c PATH: use the configuration file located at PATH\n");
+	printf("   -n: start cracking immediately without waiting for the user to press enter\n");
+	printf("   -f y/n: enable (y) or disable (n) the fast check\n\n");
+	printf("MODE\n");
+	printf("   1: Bruteforce\n");
+	printf("   2: Password list\n");
+	printf("   3: Password list first then bruteforce\n");
+	printf("   4: Interactive\n\n");
+	printf("filename:\n");
 	printf("   The name of the file containing the LUKS encrypted partition.\n");
 	printf("   For testing purposes Skul comes with an example cryptsetup's encrypted\n");
 	printf("   partition header in the `disks/` directory.\n");
@@ -61,7 +71,7 @@ void print_help(){
 }
 
 void print_small_help(){
-	printf("Usage: skul [-h] [-v] <filename>\n");
+	printf("Usage: skul [options] <filename>\n");
 	printf("Try 'skul -h' for more information.\n");
 }
 

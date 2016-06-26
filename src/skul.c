@@ -54,10 +54,10 @@ int interface_selection(pheader *header,int *slot,int *slot_order, int *tot,
 int main(int argc, char **argv){
 	
 	unsigned char *crypt_disk=NULL;
-	char *path, *set; 
+	char *path, *set, *cfg_path=NULL; 
 	pheader header;
 	lkey_t encrypted;
-	int iv_mode, chain_mode,i,set_len,num,j,c, mod, res=0;
+	int iv_mode, chain_mode,i,set_len,num,j,c, mod, res=0,threads=0, prompt=1, errflag=0, mode=UNSET,fast=UNSET;
 	int slot[8], slot_order[8];
 	usrp UP;
 	struct timeval t0,t1;
@@ -70,22 +70,75 @@ int main(int argc, char **argv){
 		print_small_help();
 		exit(EXIT_FAILURE);
 	}
-	path = argv[1];
 
 	while (1) {
-		char c;
+		char c, choice;
+		int arg;
 		
-		c = getopt(argc, argv, "hv");
+		c = getopt(argc, argv, "hvm:c:t:nf:");
 		if (c == -1) {
 			break;
 		}
 		switch (c) {
+
 			case 'h':
 				print_help();
-				return 0;
+				return 2;
+
 			case 'v':
 				print_version();
-				return 0;
+				return 3;
+
+			case 'c':
+				if(optarg[0]!='-'){
+					cfg_path=optarg;
+				}else{
+					errprint("option requires an argument -- '-%c'\n", c);
+					errflag++;
+				}
+				break;
+
+			case 't':
+				arg=atoi(optarg);
+				if(arg>0)
+					threads=arg;
+				else{
+					errprint("illegal argument for option -- '-%c'\n", c);
+					errflag++;
+				}
+				break;
+
+			case 'm':
+				arg=atoi(optarg);
+				if(arg>0 && arg<=4){
+					mode=arg;
+				}else{
+					errprint("illegal argument for option -- '-%c'\n", c);
+					errflag++;
+				}
+				break;
+
+			case 'n':
+				prompt=0;
+				break;
+
+			case 'f':
+				choice=optarg[0];
+				switch (choice){
+					case 'y':
+						fast=1;
+						break;
+					case 'n':
+						fast=0;
+						break;
+					default:
+					errflag++;
+				}
+
+			case ':':
+				errprint("option '-%c' requires an argument\n", c);
+				break;
+
 			case '?':
 			default:
 				print_small_help();
@@ -93,9 +146,22 @@ int main(int argc, char **argv){
 		}
 	}
 
+	if(errflag){
+		print_small_help();
+		exit(EXIT_FAILURE);
+	}
+
+	if (optind >= argc) {
+		print_small_help();
+		exit(EXIT_FAILURE);
+	}
+
+	/* last argument must be the disk name */
+	path=argv[argc-1];
+
 	/* read configuration file */
-	if(!read_cfg(&UP)){
-		errprint("missing or invalid configuration file\n");
+	if(!read_cfg(&UP,threads, cfg_path, mode, fast)){
+		errprint("[FATAL] missing or invalid configuration file\n");
 		exit(EXIT_FAILURE);
 	}
 
@@ -126,11 +192,11 @@ int main(int argc, char **argv){
 		}
 	}
 	num = c;
-	if(!UP.SEL_MOD)
+	if(UP.SEL_MOD==4)
 		mod = interface_selection(&header,slot,slot_order,&num, UP.KEY_SEL);
 	else
 		mod = UP.SEL_MOD;
-	if(mod>3){
+	if(mod>4 || mod<=0){
 		errprint("Invalid Attack mode selection in configure file\n");
 		exit(EXIT_FAILURE);
 	}
@@ -153,9 +219,11 @@ int main(int argc, char **argv){
 			printf("Min len:     %d characters\n", UP.MIN_LEN);
 			printf("Max len:     %d characters\n", UP.MAX_LEN);
 			printf("Alphabet:    %d\n\n", UP.ALP_SET);
-			printf("Press enter to start cracking!");
-			getchar();
-			printf("\n");
+			if(prompt){
+				printf("Press enter to start cracking!");
+				getchar();
+				printf("\n");
+			}
 
 			/* START GLOBAL TIMER */
 			gettimeofday(&t0,NULL);
@@ -174,9 +242,11 @@ int main(int argc, char **argv){
 
 		case 2: /* pwlist */
 			printf("Attack mode: Password List\n\n");
-			printf("Press enter to start cracking!");
-			getchar();
-			printf("\n");
+			if(prompt){
+				printf("Press enter to start cracking!");
+				getchar();
+				printf("\n");
+			}
 
 			/* START GLOBAL TIMER */
 			gettimeofday(&t0,NULL);
@@ -194,9 +264,11 @@ int main(int argc, char **argv){
 			printf("Min len:     %d characters\n", UP.MIN_LEN);
 			printf("Max len:     %d characters\n", UP.MAX_LEN);
 			printf("Alphabet:    %d\n\n", UP.ALP_SET);
-			printf("Press enter to start cracking!");
-			getchar();
-			printf("\n");
+			if(prompt){
+				printf("Press enter to start cracking!");
+				getchar();
+				printf("\n");
+			}
 
 			/* START GLOBAL TIMER */
 			gettimeofday(&t0,NULL);

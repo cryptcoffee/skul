@@ -87,7 +87,7 @@ int read_header(pheader *header, char *path, int *slot){
 	int i;
 
 	if(!(disk=fopen(path,"rb+"))){
-		perror("fopen");
+		errprint("cannot open file: %s\n",path);
 		return 0;
 	}
 
