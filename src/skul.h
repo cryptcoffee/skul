@@ -11,7 +11,10 @@
  * hotfix in this version */
 #define SKUL_FIX 1
 
-/*#define DEBUG */
+/* debug and warnings
+ * #define DEBUG 
+ * #define WARN 
+ * */
 #define LOG 0
 
 #endif

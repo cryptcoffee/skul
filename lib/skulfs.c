@@ -215,8 +215,8 @@ void print_keyslot(pheader *header,int slot){
 			printf("%02x ",header->keyslot[slot].salt[j]);
 		}
 		printf("\n");
-		printf("KEY MATERIAL OFFSET: %d sectors\n",header->keyslot[slot].key_material_offset);*/
-		printf("Stripes: %d\n",header->keyslot[slot].stripes);
+		printf("KEY MATERIAL OFFSET: %d sectors\n",header->keyslot[slot].key_material_offset);
+		printf("Stripes: %d\n",header->keyslot[slot].stripes);*/
 	}
 	
 }

@@ -77,21 +77,24 @@ void print_format(unsigned long val){
 	if(val==0)
 		printf("00");
 	else if(val<10)
-		printf("0%d",(int)val);
+		printf("0%lu",val);
 	else
-		printf("%ld",val);
+		printf("%lu",val);
 }
 
 void print_time(unsigned long sec){
+	const unsigned int SECONDS_IN_A_DAY=86400;
 	const unsigned int SECONDS_IN_AN_HOUR = 3600; 
 	const unsigned int SECONDS_IN_A_MINUTE = 60;
 
-	print_format((unsigned long)(sec/SECONDS_IN_AN_HOUR));
-	printf(":");
+	print_format((unsigned long)(sec/SECONDS_IN_A_DAY));
+	printf("d ");
+	print_format((unsigned long)((sec%SECONDS_IN_A_DAY)/SECONDS_IN_AN_HOUR));
+	printf("h ");
 	print_format((unsigned long)((sec%SECONDS_IN_AN_HOUR)/SECONDS_IN_A_MINUTE));
-	printf(":");
+	printf("m ");
 	print_format((unsigned long)((sec%SECONDS_IN_AN_HOUR)%SECONDS_IN_A_MINUTE));
-	printf("\n");
+	printf("s\n");
 
 }
 
@@ -138,6 +141,22 @@ int debug_print(const char *format, ...){
 
 	return 0;
 }
+
+int warn_print(const char *format, ...){
+
+#ifdef WARN
+	va_list arg;
+	int done;
+	
+		va_start(arg, format);
+		done = vfprintf(stdout,format,arg);
+		va_end(arg);
+		return done;
+#endif
+
+	return 0;
+}
+
 
 void dbgprintkey(uint8_t *key, int len, char *name){
 	

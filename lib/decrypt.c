@@ -385,7 +385,7 @@ int open_key(char *key, int keylen, pheader *header, int iv_mode,
 							LUKS_SALTSIZE ,header->keyslot[keyslot].iterations, 
 							EVP_get_digestbyname(header->hash_spec),
 							usrKeyhashed.keylen,usrKeyhashed.key))){ 
-				errprint("error hashing usrKey\n");
+				warn_print("[WARNING] error hashing usrKey\n");
 				r=0;
 				goto end;
 			}
@@ -395,26 +395,26 @@ int open_key(char *key, int keylen, pheader *header, int iv_mode,
 	if(iv_mode == ESSIV){ 
 	
 		if(!(iv = calloc(1,AES_BLOCK_SIZE))){
-			errprint("calloc error\n");
+			warn_print("[WARNING] calloc error\n");
 			r=0;
 			goto end;
 		}
 			
 		if(!(iv_salt = calloc(SHA256_DIGEST_LENGTH,sizeof(char)))){
-			errprint("calloc error\n");
+			warn_print("[WARNING] calloc error\n");
 			r=0;
 			goto end;
 		}
 	
 		if(!(set_essivkey(iv_salt, usrKeyhashed.key, 32))){
-			errprint("iv_setkey error\n");
+			warn_print("[WARNING] iv_setkey error\n");
 			r=0;
 			goto end;
 		}
 	
 	}else if(chain_mode == XTS){
 		if(!(iv = calloc(2,AES_BLOCK_SIZE))){
-			errprint("calloc error\n");
+			warn_print("[WARNING] calloc error\n");
 			r=0;
 			goto end;
 		}
@@ -437,12 +437,12 @@ int open_key(char *key, int keylen, pheader *header, int iv_mode,
 				switch(iv_mode){
 					case ESSIV:
 					if(!gen_essiv(iv_salt, iv, &j, buff, AES_BLOCK_SIZE)){
-							errprint("gen_essiv error\n");
+							warn_print("[WARNING] gen_essiv error\n");
 							r=0;
 							goto end;
 						}
 						if(j != AES_BLOCK_SIZE){
-							errprint("gen_essiv len error\n");
+							warn_print("[WARNING] gen_essiv len error\n");
 							r=0;
 							goto end;
 						}
@@ -466,12 +466,12 @@ int open_key(char *key, int keylen, pheader *header, int iv_mode,
 					encrypted->key+(sector*SECTOR_SIZE),
 					SECTOR_SIZE,&outl,
 					split.key+(sector*SECTOR_SIZE),iv)){
-			errprint("decrypt error!!\n");
+			warn_print("[WARNING] decrypt error\n");
 			r=0;
 			goto end;
 		}
 		if(outl!=SECTOR_SIZE){
-			errprint("\t[WARNING:] DecryptUpdate length non corresponding\n\taspected:%d, obtained:%d\n", 
+			warn_print("\t[WARNING] DecryptUpdate length non corresponding\n\taspected:%d, obtained:%d\n", 
 					SECTOR_SIZE, outl);
 			r=0;
 			goto end;
@@ -483,7 +483,7 @@ int open_key(char *key, int keylen, pheader *header, int iv_mode,
 	if(AF_merge(split.key,
 					master.key,header->key_bytes,
 					header->keyslot[keyslot].stripes, header->hash_spec)!=0){
-		errprint("error merging decrypted masterKey\n");
+		warn_print("[WARNING] error merging decrypted masterKey\n");
 		r=0;
 		goto end;
 	}

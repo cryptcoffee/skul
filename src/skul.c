@@ -57,7 +57,7 @@ int main(int argc, char **argv){
 	char *path, *set; 
 	pheader header;
 	lkey_t encrypted;
-	int iv_mode, chain_mode,i,set_len,num,j,c, mod;
+	int iv_mode, chain_mode,i,set_len,num,j,c, mod, res=0;
 	int slot[8], slot_order[8];
 	usrp UP;
 	struct timeval t0,t1;
@@ -145,6 +145,7 @@ int main(int argc, char **argv){
 	else
 		printf("Fast check:  Disabled\n");
 
+
 	switch(mod){
 		
 		case 1: /* bruteforce */
@@ -156,14 +157,15 @@ int main(int argc, char **argv){
 			getchar();
 			printf("\n");
 
-			set = init_set(&set_len,UP.ALP_SET); 
 			/* START GLOBAL TIMER */
 			gettimeofday(&t0,NULL);
+
+			set = init_set(&set_len,UP.ALP_SET); 
 			for(j=0;j<num;j++){
 				for(i=UP.MIN_LEN;i<=UP.MAX_LEN;i++){
-					if(bruteforce(i, set, set_len, &header, iv_mode, 
+					if((res=bruteforce(i, set, set_len, &header, iv_mode, 
 								chain_mode, &encrypted, crypt_disk,
-									slot_order[j],UP.NUM_THR,UP.FST_CHK,UP.PRG_BAR)){
+									slot_order[j],UP.NUM_THR,UP.FST_CHK,UP.PRG_BAR))){
 						break;
 					}
 				}
@@ -176,8 +178,11 @@ int main(int argc, char **argv){
 			getchar();
 			printf("\n");
 
+			/* START GLOBAL TIMER */
+			gettimeofday(&t0,NULL);
+
 			for(j=0;j<num;j++){
-				pwlist(&header, iv_mode, chain_mode, &encrypted, crypt_disk,
+				res=pwlist(&header, iv_mode, chain_mode, &encrypted, crypt_disk,
 						slot_order[j],UP.NUM_THR,UP.FST_CHK,UP.PRG_BAR);
 			}
 			break;
@@ -193,15 +198,18 @@ int main(int argc, char **argv){
 			getchar();
 			printf("\n");
 
+			/* START GLOBAL TIMER */
+			gettimeofday(&t0,NULL);
+
 			for(j=0;j<num;j++){
-				if(!pwlist(&header, iv_mode, chain_mode, &encrypted, crypt_disk,
-							slot_order[j],UP.NUM_THR,UP.FST_CHK,UP.PRG_BAR)){
+				if(!(res=pwlist(&header, iv_mode, chain_mode, &encrypted, crypt_disk,
+							slot_order[j],UP.NUM_THR,UP.FST_CHK,UP.PRG_BAR))){
 					/* then call bruteforce */
 					set = init_set(&set_len,UP.ALP_SET); 
 					for(i=UP.MIN_LEN;i<=UP.MAX_LEN;i++){
-						if(bruteforce(i, set, set_len, &header, iv_mode, 
+						if((res=bruteforce(i, set, set_len, &header, iv_mode, 
 									chain_mode, &encrypted, crypt_disk, 
-									slot_order[j],UP.NUM_THR,UP.FST_CHK,UP.PRG_BAR)){
+									slot_order[j],UP.NUM_THR,UP.FST_CHK,UP.PRG_BAR))){
 							break;
 						}
 					}
@@ -230,6 +238,9 @@ int main(int argc, char **argv){
 		free(set);
 	}
 	
+	if(res==0)
+		return 1;
+
 	return 0;
 }
 

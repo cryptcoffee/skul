@@ -258,7 +258,7 @@ int pwlist(pheader *header, int iv_mode, int chain_mode,
 	pthread_attr_t attr;
 	void *(*lst)(void *);
 	int (*control)(int,int,pthread_t *,int, pheader *, int *, char *, int, int);
-	unsigned long sec;
+	unsigned long sec=0;
 	struct timeval t0,t1;
 
 	if(!(f=fopen("conf/pwlist","r"))){
@@ -380,7 +380,8 @@ int pwlist(pheader *header, int iv_mode, int chain_mode,
 		for(j=0;j<num_thr;j++){
 			tot+=progress[j];
 		}
-		printf("Tried: %d - ",tot);
+		printf("Tried: %d passwords -  ",tot);
+		fflush(stdout);
 	}
 	if(!found){
 		printf("Time: ");

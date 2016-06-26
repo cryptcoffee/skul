@@ -32,6 +32,7 @@ void print_format(unsigned long val);
 void print_time(unsigned long sec);
 int errprint(const char *format, ...);
 int debug_print(const char *format, ...);
+int warn_print(const char *format, ...);
 int dbgprint(int debug, const char *format, ...);
 void dbgprintkey(uint8_t *key, int len, char *name);
 uint32_t l2bEndian(uint32_t num);
