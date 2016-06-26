@@ -46,6 +46,7 @@ typedef struct threadlist_data{
 	int keyslot;
 	int *progress;
 	char *win_pwd;
+	int pbk_hash;
 
 }thlist_data;
 
@@ -67,6 +68,7 @@ typedef struct threadforce_data{
 	int keyslot;
 	int *progress;
 	char *win_pwd;
+	int pbk_hash;
 
 }thforce_data;
 
