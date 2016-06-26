@@ -102,6 +102,8 @@ int thlist_datainit(thlist_data *arg, int id, char **list, int num,
 		arg->pbk_hash=SHA_TWO_FIVE_SIX;
 	}else if(strcmp(header->hash_spec, "sha512")==0){
 		arg->pbk_hash=SHA_FIVE_ONE_TWO;
+	}else if(strcmp(header->hash_spec, "ripemd160")==0){
+		arg->pbk_hash=RIPEMD;
 	}else{
 		errprint("Unsupported hash function\n");
 		return 0;
@@ -168,6 +170,8 @@ int thforce_datainit(thforce_data *arg, int id, int start, int num,
 		arg->pbk_hash=SHA_TWO_FIVE_SIX;
 	}else if(strcmp(header->hash_spec, "sha512")==0){
 		arg->pbk_hash=SHA_FIVE_ONE_TWO;
+	}else if(strcmp(header->hash_spec, "ripemd160")==0){
+		arg->pbk_hash=RIPEMD;
 	}else{
 		errprint("Unsupported hash function\n");
 		return 0;

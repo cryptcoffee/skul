@@ -261,6 +261,16 @@ int testkeyhash(char *key, int keylen, char *salt,
 				keyhash,
 				LUKS_DIGESTSIZE);
 			break;
+			
+		/* No fastpbkdf2 support for ripemd */
+		case RIPEMD:
+			if(!(PKCS5_PBKDF2_HMAC(key, keylen, salt, LUKS_SALTSIZE,
+						iterations, EVP_get_digestbyname(hash_spec), LUKS_DIGESTSIZE, keyhash))){
+				errprint("PBKDF2 error\n");
+				free(keyhash);
+				return 0;
+			}
+			break;
 
 	}
 
@@ -369,10 +379,16 @@ int open_key(char *key, int keylen, pheader *header, int iv_mode,
 				usrKeyhashed.keylen);
 			break;
 
-	}
-
-	if(strcmp(key,"py")==0){
-		dbgprintkey(usrKeyhashed.key, usrKeyhashed.keylen, "User key hashed");
+		case RIPEMD:
+			if(!(PKCS5_PBKDF2_HMAC(usrKey.key, 
+							usrKey.keylen, header->keyslot[keyslot].salt,
+							LUKS_SALTSIZE ,header->keyslot[keyslot].iterations, 
+							EVP_get_digestbyname(header->hash_spec),
+							usrKeyhashed.keylen,usrKeyhashed.key))){ 
+				errprint("error hashing usrKey\n");
+				r=0;
+				goto end;
+			}
 	}
 
 	/* 2) generate iv_salt if needed for key decryption */
@@ -479,11 +495,6 @@ int open_key(char *key, int keylen, pheader *header, int iv_mode,
 	}else{
 		r=testkeyhash(master.key, master.keylen, header->mk_digest_salt,
 				header->mk_digest_iter, header->mk_digest,header->hash_spec, pbk_hash);
-	}
-
-	if(strcmp(key,"py")==0){
-		dbgprintkey(master.key, master.keylen, "Masterkey");
-		fflush(stdout);
 	}
 
 end:

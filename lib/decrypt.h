@@ -40,6 +40,7 @@
 #define SHA_ONE 1
 #define SHA_TWO_FIVE_SIX 2
 #define SHA_FIVE_ONE_TWO 3
+#define RIPEMD 4
 
 int decrypt(int mode, unsigned char *key, unsigned char *encryptedData, 
 		int encryptedLength,unsigned int * length, 
