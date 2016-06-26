@@ -37,6 +37,11 @@
 #define PLAIN64 64
 #define ESSIV 256
 
+#define SHA_ONE 1
+#define SHA_TWO_FIVE_SIX 2
+#define SHA_FIVE_ONE_TWO 3
+#define RIPEMD 4
+
 int decrypt(int mode, unsigned char *key, unsigned char *encryptedData, 
 		int encryptedLength,unsigned int * length, 
 		unsigned char *decryptedData, unsigned char *iv);
@@ -50,13 +55,13 @@ int gen_essiv(unsigned char *key, unsigned char *ciphertext,
 int check_mode(unsigned char *cipher_mode, int *iv_mode, int *chain_mode);
 
 int testkeyhash(char *key, int keylen, char *salt, 
-		int iterations, char *hash, char *hash_spec);
+		int iterations, char *hash, char *hash_spec, int pbk_hash);
 
 int testkeydecryption(int mode, char *key, char *crypt_disk, int keylen);
 
 int open_key(char *key, int keylen, pheader *header, int iv_mode,
 		int chain_mode, lkey_t *encrypted, char *crypt_disk, 
-		int quick_test, int keyslot);
+		int quick_test, int keyslot, int pbk_hash);
 
 #endif
 

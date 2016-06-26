@@ -6,7 +6,7 @@
  * */ 
 #define SKUL_MAJOR 0
 #define SKUL_MINOR 2
-#define DEBUG 0
+/*#define DEBUG */
 #define LOG 0
 
 #endif

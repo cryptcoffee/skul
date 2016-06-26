@@ -95,6 +95,21 @@ int thlist_datainit(thlist_data *arg, int id, char **list, int num,
 	}
 	memcpy(arg->crypt_disk, crypt_disk, 32);
 
+	/* set the correct pbk_hash */
+	if(strcmp(header->hash_spec, "sha1")==0){
+		arg->pbk_hash=SHA_ONE;
+	}else if(strcmp(header->hash_spec, "sha256")==0){
+		arg->pbk_hash=SHA_TWO_FIVE_SIX;
+	}else if(strcmp(header->hash_spec, "sha512")==0){
+		arg->pbk_hash=SHA_FIVE_ONE_TWO;
+	}else if(strcmp(header->hash_spec, "ripemd160")==0){
+		arg->pbk_hash=RIPEMD;
+	}else{
+		errprint("Unsupported hash function\n");
+		return 0;
+	}
+
+
 	return 1;	
 }
 
@@ -148,6 +163,21 @@ int thforce_datainit(thforce_data *arg, int id, int start, int num,
 	}
 	memcpy(arg->set, set, set_len);
 
+	/* set the correct pbk_hash */
+	if(strcmp(header->hash_spec, "sha1")==0){
+		arg->pbk_hash=SHA_ONE;
+	}else if(strcmp(header->hash_spec, "sha256")==0){
+		arg->pbk_hash=SHA_TWO_FIVE_SIX;
+	}else if(strcmp(header->hash_spec, "sha512")==0){
+		arg->pbk_hash=SHA_FIVE_ONE_TWO;
+	}else if(strcmp(header->hash_spec, "ripemd160")==0){
+		arg->pbk_hash=RIPEMD;
+	}else{
+		errprint("Unsupported hash function\n");
+		return 0;
+	}
+
+
 	return 1;
 }
 
@@ -177,7 +207,7 @@ void *th_force(void *param){
 		
 		found = open_key(guess, d->len, &(d->header), d->iv_mode, 
 				d->chain_mode, &(d->encrypted), d->crypt_disk,
-				d->fast_check, d->keyslot);
+				d->fast_check, d->keyslot, d->pbk_hash);
 		
 		*(d->progress)=*(d->progress) + 1;
 
@@ -213,7 +243,7 @@ void *th_list(void *param){
 		len = strlen(d->list[j]);
 		found = open_key(d->list[j], len, &(d->header), d->iv_mode, 
 				d->chain_mode, &(d->encrypted), d->crypt_disk, 
-				d->fast_check, d->keyslot);
+				d->fast_check, d->keyslot, d->pbk_hash);
 
 		if(found){
 
@@ -338,7 +368,7 @@ void *test_force(void *param){
 		
 		found = open_key(guess, d->len, &(d->header), d->iv_mode, 
 				d->chain_mode, &(d->encrypted), d->crypt_disk,
-				d->fast_check, d->keyslot);
+				d->fast_check, d->keyslot, d->pbk_hash);
 		
 		*(d->progress)=*(d->progress) + 1;
 
@@ -372,7 +402,7 @@ void *test_list(void *param){
 		len = strlen(d->list[j]);
 		found = open_key(d->list[j], len, &(d->header), d->iv_mode, 
 				d->chain_mode, &(d->encrypted), d->crypt_disk, 
-				d->fast_check, d->keyslot);
+				d->fast_check, d->keyslot, d->pbk_hash);
 
 		if(found){
 
