@@ -47,7 +47,8 @@ void print_help(){
 	printf("   -t NUM: use NUM threads\n");
 	printf("   -c PATH: use the configuration file located at PATH\n");
 	printf("   -n: start cracking immediately without waiting for the user to press enter\n");
-	printf("   -f y/n: enable (y) or disable (n) the fast check\n\n");
+	printf("   -f y/n: enable (y) or disable (n) the fast check\n");
+	printf("   -l PATH: use the password list file located at PATH \n\n");
 	printf("MODE\n");
 	printf("   1: Bruteforce\n");
 	printf("   2: Password list\n");
