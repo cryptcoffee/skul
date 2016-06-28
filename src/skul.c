@@ -54,7 +54,7 @@ int interface_selection(pheader *header,int *slot,int *slot_order, int *tot,
 int main(int argc, char **argv){
 	
 	unsigned char *crypt_disk=NULL;
-	char *path, *set, *cfg_path=NULL; 
+	char *path, *set, *cfg_path=NULL, *pwlist_path=NULL; 
 	pheader header;
 	lkey_t encrypted;
 	int iv_mode, chain_mode,i,set_len,num,j,c, mod, res=0,threads=0, prompt=1, errflag=0, mode=UNSET,fast=UNSET;
@@ -62,6 +62,7 @@ int main(int argc, char **argv){
 	usrp UP;
 	struct timeval t0,t1;
 	unsigned long sec;
+	FILE *f;
 
 	set = NULL;
 	
@@ -75,7 +76,7 @@ int main(int argc, char **argv){
 		char c, choice;
 		int arg;
 		
-		c = getopt(argc, argv, "hvm:c:t:nf:");
+		c = getopt(argc, argv, "hvm:c:t:nf:l:");
 		if (c == -1) {
 			break;
 		}
@@ -134,6 +135,16 @@ int main(int argc, char **argv){
 					default:
 					errflag++;
 				}
+				break;
+
+			case 'l':
+				if(optarg[0]!='-'){
+					pwlist_path=optarg;
+				}else{
+					errprint("option requires an argument -- '-%c'\n", c);
+					errflag++;
+				}
+				break;
 
 			case ':':
 				errprint("option '-%c' requires an argument\n", c);
@@ -158,6 +169,17 @@ int main(int argc, char **argv){
 
 	/* last argument must be the disk name */
 	path=argv[argc-1];
+
+	/* test pwlist file */
+	if(pwlist_path){
+		if(!(f=fopen(pwlist_path,"r"))){
+			errprint("cannot open %s: %s\n",pwlist_path, strerror(errno));
+			errprint("[FATAL] missing password list file\n");
+			return 0;
+		}else{
+			fclose(f);
+		}
+	}
 
 	/* read configuration file */
 	if(!read_cfg(&UP,threads, cfg_path, mode, fast)){
@@ -253,7 +275,7 @@ int main(int argc, char **argv){
 
 			for(j=0;j<num;j++){
 				res=pwlist(&header, iv_mode, chain_mode, &encrypted, crypt_disk,
-						slot_order[j],UP.NUM_THR,UP.FST_CHK,UP.PRG_BAR);
+						slot_order[j],UP.NUM_THR,UP.FST_CHK,UP.PRG_BAR, pwlist_path);
 			}
 			break;
 
@@ -275,7 +297,7 @@ int main(int argc, char **argv){
 
 			for(j=0;j<num;j++){
 				if(!(res=pwlist(&header, iv_mode, chain_mode, &encrypted, crypt_disk,
-							slot_order[j],UP.NUM_THR,UP.FST_CHK,UP.PRG_BAR))){
+							slot_order[j],UP.NUM_THR,UP.FST_CHK,UP.PRG_BAR, pwlist_path))){
 					/* then call bruteforce */
 					set = init_set(&set_len,UP.ALP_SET); 
 					for(i=UP.MIN_LEN;i<=UP.MAX_LEN;i++){

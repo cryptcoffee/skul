@@ -30,6 +30,7 @@
 #include <unistd.h>
 #include <stdlib.h>
 #include <stdio.h>
+#include <errno.h>
 #include "alloclib.h"
 
 int read_cfg(usrp *UP, int threads, char *cfg_path, int mode, int fast){
@@ -40,7 +41,7 @@ int read_cfg(usrp *UP, int threads, char *cfg_path, int mode, int fast){
 
 	if(cfg_path){
 		if(!(conf = fopen(cfg_path,"r"))){
-			errprint("cannot open specified configuration file: %s\n",cfg_path);
+			errprint("cannot open %s: %s\n",cfg_path, strerror(errno));
 			return 0;
 		}
 	}else{

@@ -26,6 +26,8 @@
 
 #include "thread.h"
 #include "../src/skul.h"
+#include "errno.h"
+#include <string.h>
 #include "alloclib.h"
 #include "utils.h"
 #include <sys/time.h>
@@ -248,7 +250,7 @@ int bruteforce(int len, char *set,
 
 int pwlist(pheader *header, int iv_mode, int chain_mode, 
 		lkey_t *encrypted, char *crypt_disk, int keyslot, 
-		int num_thr, int fst_chk, int prg_bar){
+		int num_thr, int fst_chk, int prg_bar, char *pwlist_path){
 
 	char **list, c, *win_pwd;
 	int i=0,j, count=0,jforth,max_l=0,cur_l,lastj, *progress, tot=0, found=1;
@@ -261,10 +263,17 @@ int pwlist(pheader *header, int iv_mode, int chain_mode,
 	unsigned long sec=0;
 	struct timeval t0,t1;
 
-	if(!(f=fopen("conf/pwlist","r"))){
-		perror("fopen");
-		errprint("fopen error\n");
-		return 0;
+	if(pwlist_path){
+		if(!(f=fopen(pwlist_path,"r"))){
+			errprint("cannot open %s: %s\n",pwlist_path, strerror(errno));
+			return 0;
+		}
+	}else{
+		if(!(f=fopen("conf/pwlist","r"))){
+			perror("fopen");
+			errprint("fopen error\n");
+			return 0;
+		}
 	}
 	while((c=fgetc(f))!=EOF){
 		if(c=='\n')
