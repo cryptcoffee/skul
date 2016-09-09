@@ -48,7 +48,7 @@ int alloc_header(pheader *header){
 		fprintf(stderr,"malloc error\n");
 		return 0;
 	}
-	if(!(header->hash_spec = calloc(32,sizeof(char)))){
+	if(!(header->hash_spec = calloc(33,sizeof(char)))){
 		fprintf(stderr,"malloc error\n");
 		return 0;
 	}
@@ -67,7 +67,7 @@ int alloc_header(pheader *header){
 
 	/* keyslot field allocation */
 	for(i=0;i<LUKS_NUMKEYS;i++){
-		if(!(header->keyslot[i].salt = calloc(LUKS_SALTSIZE,sizeof(char)))){
+		if(!(header->keyslot[i].salt = calloc(LUKS_SALTSIZE+1,sizeof(char)))){
 			fprintf(stderr,"malloc error\n");
 			return 0;
 		}

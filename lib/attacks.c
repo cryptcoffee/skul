@@ -121,10 +121,7 @@ char *init_set(int *set_len, int id_set){
 	return set;
 }
 
-int bruteforce(int len, char *set, 
-		int set_len, pheader *header, 
-		int iv_mode, int chain_mode, lkey_t *encrypted, 
-		char *crypt_disk, int keyslot, int num_thr, int fst_chk, int prg_bar){
+int bruteforce(int len, char *set, int set_len, SKUL_CTX *ctx){
 
 	int j,jpt,jptr,lpt,lptr/*,num,comb*/,tot_comb,*progress,reminder,start,tot=0,found=1;
 	thforce_data *arg;
@@ -141,11 +138,11 @@ int bruteforce(int len, char *set,
 	else
 		printf("Bruteforce: %d chars\n", len);
 
-	if((arg = calloc(num_thr, sizeof(thforce_data)))==NULL){
+	if((arg = calloc(ctx->UP.NUM_THR, sizeof(thforce_data)))==NULL){
 		errprint("malloc error!\n");
 		return 0;
 	}
-	if((threads = calloc(num_thr, sizeof(pthread_t)))==NULL){
+	if((threads = calloc(ctx->UP.NUM_THR, sizeof(pthread_t)))==NULL){
 		errprint("malloc error!\n");
 		return 0;
 	}
@@ -153,10 +150,11 @@ int bruteforce(int len, char *set,
 		errprint("malloc error!\n");
 		return 0;
 	}
-	if((progress = calloc(num_thr, sizeof(int)))==NULL){
+	if((progress = calloc(ctx->UP.NUM_THR, sizeof(int)))==NULL){
 		errprint("malloc error!\n");
 		return 0;
 	}
+
 
 	/* attributes initialization */
 	pthread_attr_init(&attr);
@@ -164,30 +162,28 @@ int bruteforce(int len, char *set,
 
 	/* arguments initialization */
 	tot_comb = pow(set_len,len);
-	lpt = set_len/num_thr;
+	lpt = set_len/ctx->UP.NUM_THR;
 	lptr = lpt+1;
-	reminder = set_len%num_thr;
+	reminder = set_len%ctx->UP.NUM_THR;
 	jpt = pow(set_len,len-1)*lpt;
-	jptr = pow(set_len,len-1)*(lpt+1);
+	jptr = pow(set_len,len-1)*(lptr);
 	start=0;
 
 	/* threads with reminder */
 	for(j=0;j<reminder;j++){
 		start = j*lptr;
-		if(!thforce_datainit(&(arg[j]), j, start, lptr, jptr, len, set_len, 
-					header, iv_mode, chain_mode, encrypted, crypt_disk, 
-					fst_chk, set, keyslot,&progress[j], win_pwd)){
+		if(!thforce_datainit(&(arg[j]), ctx, j, start, lptr, jptr, len, set_len, 
+					set, &progress[j], win_pwd)){
 			errprint("thforce_datainit error!\n");
 			return 0;
 		}
 	}
 
 	/* threads without reminder */
-	for(j=reminder;j<num_thr;j++){
+	for(j=reminder;j<ctx->UP.NUM_THR;j++){
 		start = reminder*lptr + (j-reminder)*lpt;
-		if(!thforce_datainit(&(arg[j]), j, start, lpt, jpt, len, set_len, 
-					header, iv_mode, chain_mode, encrypted, crypt_disk, 
-					fst_chk, set, keyslot,&progress[j], win_pwd)){
+		if(!thforce_datainit(&(arg[j]), ctx, j, start, lpt, jpt, len, set_len, 
+					set, &progress[j], win_pwd)){
 			errprint("thforce_datainit error!\n");
 			return 0;
 		}
@@ -204,21 +200,23 @@ int bruteforce(int len, char *set,
 	gettimeofday(&t0,NULL);
 
 	/* threads creation */
-	for(j=0;j<num_thr;j++){
+	for(j=0;j<ctx->UP.NUM_THR;j++){
 		if( pthread_create(&threads[j],&attr, force, (void *)&arg[j]) ){
 			errprint("pthread_create error!\n");
 			return 0;
 		}
 	}
 
-	if(!control(len, tot_comb, threads, num_thr, header,progress,win_pwd, keyslot,prg_bar)){
+	/* TODO: make independent from LUKS */
+	if(!control(len, tot_comb, threads, ctx->UP.NUM_THR, &(ctx->luks->header), progress, win_pwd, 
+				ctx->cur_pwd, ctx->UP.PRG_BAR)){
 		printf("Password not found\n");
 		found = 0;
 	}
 
 #ifdef TESTING
 
-	for(j=0;j<num_thr;j++){
+	for(j=0;j<ctx->UP.NUM_THR;j++){
 		pthread_join(threads[j],NULL);
 	}
 
@@ -228,8 +226,8 @@ int bruteforce(int len, char *set,
 	gettimeofday(&t1,NULL);
 	sec=t1.tv_sec-t0.tv_sec;
 	tot=0;
-	if(!prg_bar){
-		for(j=0;j<num_thr;j++){
+	if(!ctx->UP.PRG_BAR){
+		for(j=0;j<ctx->UP.NUM_THR;j++){
 			tot+=progress[j];
 		}
 		printf("Tried: %d passwords - ",tot);
@@ -248,9 +246,7 @@ int bruteforce(int len, char *set,
 	return found;
 }
 
-int pwlist(pheader *header, int iv_mode, int chain_mode, 
-		lkey_t *encrypted, char *crypt_disk, int keyslot, 
-		int num_thr, int fst_chk, int prg_bar, char *pwlist_path){
+int pwlist(SKUL_CTX *ctx){
 
 	char **list, c, *win_pwd;
 	int i=0,j, count=0,jforth,max_l=0,cur_l,lastj, *progress, tot=0, found=1;
@@ -263,9 +259,9 @@ int pwlist(pheader *header, int iv_mode, int chain_mode,
 	unsigned long sec=0;
 	struct timeval t0,t1;
 
-	if(pwlist_path){
-		if(!(f=fopen(pwlist_path,"r"))){
-			errprint("cannot open %s: %s\n",pwlist_path, strerror(errno));
+	if(ctx->pwlist_path){
+		if(!(f=fopen(ctx->pwlist_path,"r"))){
+			errprint("cannot open %s: %s\n",ctx->pwlist_path, strerror(errno));
 			return 0;
 		}
 	}else{
@@ -299,31 +295,34 @@ int pwlist(pheader *header, int iv_mode, int chain_mode,
 		errprint("malloc error!\n");
 		return 0;
 	}
-	if((arg = calloc(num_thr, sizeof(thlist_data)))==NULL){
+	if((arg = calloc(ctx->UP.NUM_THR, sizeof(thlist_data)))==NULL){
 		errprint("malloc error!\n");
 		return 0;
 	}
-	if((threads = calloc(num_thr, sizeof(pthread_t)))==NULL){
+	if((threads = calloc(ctx->UP.NUM_THR, sizeof(pthread_t)))==NULL){
 		errprint("malloc error!\n");
 		return 0;
 	}
-	if((progress = calloc(num_thr, sizeof(int)))==NULL){
+	if((progress = calloc(ctx->UP.NUM_THR, sizeof(int)))==NULL){
 		errprint("malloc error!\n");
 		return 0;
 	}
 	
-
 	/* attributes initialization */
 	pthread_attr_init(&attr);
 	pthread_attr_setdetachstate(&attr,PTHREAD_CREATE_JOINABLE);
 
+//	int *addr = calloc(80000,sizeof(char));
+//	printf("%016x\n", &addr);
+//	printf("-----------\n");
+//	fflush(stdout);
+
+
 	/* arguments initialization */
-	jforth = count/num_thr;
-	for(j=0;j<num_thr-1;j++){
-		if(!thlist_datainit(&(arg[j]), j, list+(j*jforth), jforth,
-					header, iv_mode, chain_mode, encrypted, 
-					crypt_disk, fst_chk, max_l, keyslot,
-					&progress[j],win_pwd)){
+	jforth = count/ctx->UP.NUM_THR;
+	for(j=0;j<ctx->UP.NUM_THR-1;j++){
+		if(!thlist_datainit(&(arg[j]), ctx, j, list+(j*jforth), jforth,
+					max_l, &progress[j],win_pwd)){
 			errprint("thlist_datainit error!\n");
 			return 0;
 		}
@@ -340,7 +339,7 @@ int pwlist(pheader *header, int iv_mode, int chain_mode,
 	gettimeofday(&t0,NULL);
 
 	/* threads creation */
-	for(j=0;j<num_thr-1;j++){
+	for(j=0;j<ctx->UP.NUM_THR-1;j++){
 		if( pthread_create(&threads[j],&attr, lst, (void *)&arg[j]) ){
 			errprint("pthread_create error!\n");
 			return 0;
@@ -351,15 +350,13 @@ int pwlist(pheader *header, int iv_mode, int chain_mode,
 	 * last thread creation (we need to do this apart because of the
 	 * approssimation of integer division)
 	 */
-	lastj = count - (jforth *(num_thr-1));
-	if(!thlist_datainit(&(arg[j]), j, list+(j*jforth), lastj,
-				header, iv_mode, chain_mode, encrypted, 
-				crypt_disk, fst_chk, max_l, keyslot,
-				&progress[j],win_pwd)){
+	lastj = count - (jforth *(ctx->UP.NUM_THR-1));
+	if(!thlist_datainit(&(arg[j]), ctx, j, list+(j*jforth), lastj,
+				max_l, &progress[j],win_pwd)){
 		errprint("thlistdata_init error!\n");
 		return 0;
 	}
-	if( pthread_create(&threads[num_thr-1],&attr, lst, (void *)&arg[j]) ){
+	if( pthread_create(&threads[ctx->UP.NUM_THR-1],&attr, lst, (void *)&arg[j]) ){
 			errprint("pthread_create error!\n");
 			return 0;
 		}
@@ -369,13 +366,15 @@ int pwlist(pheader *header, int iv_mode, int chain_mode,
 	}
 	free(list);
 
-	if(!control(max_l,count, threads, num_thr, header, progress, win_pwd,keyslot,prg_bar)){
+	/*TODO: make independent from luks*/
+	if(!control(max_l,count, threads, ctx->UP.NUM_THR, &(ctx->luks->header), progress, win_pwd,
+				ctx->cur_pwd, ctx->UP.PRG_BAR)){
 		printf("Password not found\n");
 		found = 0;
 	}
 #ifdef TEST
 
-	for(j=0;j<num_thr;j++){
+	for(j=0;j<ctx->UP.NUM_THR;j++){
 		pthread_join(threads[j],NULL);
 	}
 
@@ -385,8 +384,8 @@ int pwlist(pheader *header, int iv_mode, int chain_mode,
 	gettimeofday(&t1,NULL);
 	sec=t1.tv_sec-t0.tv_sec;
 	tot=0;
-	if(!prg_bar){
-		for(j=0;j<num_thr;j++){
+	if(!ctx->UP.PRG_BAR){
+		for(j=0;j<ctx->UP.NUM_THR;j++){
 			tot+=progress[j];
 		}
 		printf("Tried: %d passwords -  ",tot);

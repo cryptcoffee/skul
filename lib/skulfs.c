@@ -31,6 +31,7 @@
 #include <stdio.h>
 #include "alloclib.h"
 #include "decrypt.h"
+#include "../src/skul.h"
 #include <string.h>
 
 #define DEBUG 0 

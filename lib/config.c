@@ -55,7 +55,7 @@ int read_cfg(usrp *UP, int threads, char *cfg_path, int mode, int fast){
 
 	/* default */
 	UP->MIN_LEN=2;
-	UP->MAX_LEN=16;
+	UP->MAX_LEN=9;
 	UP->NUM_THR=8;
 	UP->ALP_SET=1;
 	UP->FST_CHK=1;
@@ -108,8 +108,9 @@ int read_cfg(usrp *UP, int threads, char *cfg_path, int mode, int fast){
 	if(fast!=UNSET){
 		UP->FST_CHK=fast;
 	}
-
+	
 	fclose(conf);
+
 	return 1;
 }
 

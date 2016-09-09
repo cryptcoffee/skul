@@ -29,58 +29,41 @@
 
 #define _GNU_SOURCE
 #include"skulfs.h" 
+#include"../src/skul.h"
 #include<pthread.h>
 	
 typedef struct threadlist_data{
 
+	SKUL_CTX ctx;
 	int id;
 	int num;
-	char **list;
-	pheader header;
-	int iv_mode;
-	int chain_mode;
-	lkey_t encrypted;
-	char *crypt_disk;
-	int fast_check;
 	int max_l;
-	int keyslot;
 	int *progress;
 	char *win_pwd;
-	int pbk_hash;
+	char **list;
 
 }thlist_data;
 
 typedef struct threadforce_data{
 
+	SKUL_CTX ctx;
 	int id;
 	int start;
 	int num;
 	int comb;
 	int len;
 	int set_len;
-	pheader header;
-	int iv_mode;
-	int chain_mode;
-	lkey_t encrypted;
-	char *crypt_disk;
 	char *set;
-	int fast_check;
-	int keyslot;
 	int *progress;
 	char *win_pwd;
-	int pbk_hash;
 
 }thforce_data;
 
-int thlist_datainit(thlist_data *arg, int id, char **list, int num, 
-		pheader *header, int iv_mode, int chain_mode, lkey_t *encrypted, 
-		char *crypt_disk, int fast_check,int max_l, int keyslot, int *progress,
-		char *win_pwd);
+int thlist_datainit(thlist_data *arg, SKUL_CTX *ctx, int id, char **list, int num, 
+		int max_l, int *progress, char *win_pwd);
 
-int thforce_datainit(thforce_data *arg, int id, int start, int num,
-		int comb, int len, int set_len, pheader *header, int iv_mode,
-		int chain_mode, lkey_t *encrypted, char *crypt_disk, 
-		int fast_check, char *set, int keyslot,int *progress,
+int thforce_datainit(thforce_data *arg, SKUL_CTX *ctx, int id, int start, int num,	
+		int comb, int len, int set_len, char *set, int *progress,
 		char *win_pwd);
 
 int th_control(int max_l, int count, pthread_t *threads, int num_th, 

@@ -27,8 +27,8 @@ DBG = -g -Xlinker -Map=output.map
 # Compiling macros
 CC = gcc 
 #OPT = -Wall -pedantic -ansi -Wno-pointer-sign -D _DEFAULT_SOURCE -D_XOPEN_SOURCE=700 -D_REENTRANT -DPURIFY -O3 _BSD_SOURCE 
-OPT = -Wall -pedantic -std=c99 -Wno-pointer-sign -O3 
-COMP = $(CC) $(OPT)
+OPT = -Wall -pedantic -std=c99 -Wno-pointer-sign -O0 
+COMP = $(CC) $(OPT) -g
 COMPDBG = $(COMP) $(DBG)
 
 # working directories
@@ -45,10 +45,10 @@ SRC = src/
 #DLO = -ldl -lm -I${OPENSSLI} -L${OPENSSLL} -lcrypto -lssl -lpthread  -pthread 
 DLO = -ldl -lm -lssl -lcrypto -lpthread -pthread
 
-OBJS= alloclib.o skulfs.o utils.o decrypt.o random.o af.o config.o thread.o attacks.o fastpbkdf2.o 
+OBJS= alloclib.o random.o af.o config.o fastpbkdf2.o luks.o skulfs.o utils.o decrypt.o thread.o attacks.o 
 
 skul: $(SRC)skul.c $(OBJS)
-	$(COMP) -o $@ $(SRC)skul.c $(DIR)alloclib.o $(DIR)skulfs.o $(DIR)random.o $(DIR)af.o $(DIR)utils.o $(DIR)decrypt.o $(DIR)config.o $(DIR)thread.o $(DIR)attacks.o $(DIR)fastpbkdf2.o $(DLO) 
+	$(COMP) -o $@ $(SRC)skul.c $(DIR)luks.o $(DIR)alloclib.o $(DIR)skulfs.o $(DIR)random.o $(DIR)af.o $(DIR)utils.o $(DIR)decrypt.o $(DIR)config.o $(DIR)thread.o $(DIR)attacks.o $(DIR)fastpbkdf2.o $(DLO) 
 
 skul_dbg: $(SRC)skul.c $(OBJS)
 	$(COMPDBG) -o $@ $(SRC)skul.c $(DIR)alloclib.o $(DIR)skulfs.o $(DIR)random.o $(DIR)af.o $(DIR)utils.o $(DIR)decrypt.o $(DIR)config.o $(DIR)thread.o $(DIR)attacks.o $(DIR)fastpbkdf2.o $(DLO) 
@@ -82,6 +82,10 @@ fastpbkdf2.o: $(LIB)fastpbkdf2.c
 
 attacks.o: $(LIB)attacks.c
 	$(COMP) -lm -o $(DIR)$@ -c $(LIB)attacks.c
+
+luks.o: $(LIB)luks.c
+	$(COMP) -o $(DIR)$@ -c $(LIB)luks.c
+
 
 clean:
 	rm $(DIR)*.o

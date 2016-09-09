@@ -28,6 +28,7 @@
 #define _DECRYPT_H_
 
 #include "skulfs.h"
+#include "../src/skul.h"
 #include <openssl/evp.h>
 
 #define ECB 1
@@ -59,9 +60,7 @@ int testkeyhash(char *key, int keylen, char *salt,
 
 int testkeydecryption(int mode, char *key, char *crypt_disk, int keylen);
 
-int open_key(char *key, int keylen, pheader *header, int iv_mode,
-		int chain_mode, lkey_t *encrypted, char *crypt_disk, 
-		int quick_test, int keyslot, int pbk_hash);
+int luks_open_key(char *key, int keylen, SKUL_CTX *ctx);
 
 #endif
 

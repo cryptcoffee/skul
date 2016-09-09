@@ -40,6 +40,8 @@
 #include "../lib/config.h"
 #include "../lib/thread.h"
 #include "../lib/attacks.h"
+#include "../lib/luks.h"
+#include "skul.h"
 #include <stdint.h>
 #include <inttypes.h>
 #include <math.h>
@@ -48,24 +50,22 @@
 #include <getopt.h>
 
 
-int interface_selection(pheader *header,int *slot,int *slot_order, int *tot, 
-		int key_sel);
-
 int main(int argc, char **argv){
 	
-	unsigned char *crypt_disk=NULL;
-	char *path, *set, *cfg_path=NULL, *pwlist_path=NULL; 
-	pheader header;
-	lkey_t encrypted;
-	int iv_mode, chain_mode,i,set_len,num,j,c, mod, res=0,threads=0, prompt=1, errflag=0, mode=UNSET,fast=UNSET;
-	int slot[8], slot_order[8];
-	usrp UP;
+	char *set, *cfg_path=NULL; 
+	int i,set_len, j,res=0,threads=0, prompt=1, errflag=0;
 	struct timeval t0,t1;
 	unsigned long sec;
 	FILE *f;
+	SKUL_CTX ctx;
+
+	/* SKUL INIT FUNCTION? */
+	ctx.attack_mode=UNSET;
+	ctx.fast = UNSET;
+	ctx.pwlist_path = NULL;
+	/*---------------------*/
 
 	set = NULL;
-	
 	/* check arguments */
 	if(!(argv[1])){
 		print_small_help();
@@ -112,7 +112,7 @@ int main(int argc, char **argv){
 			case 'm':
 				arg=atoi(optarg);
 				if(arg>0 && arg<=4){
-					mode=arg;
+					ctx.attack_mode=arg;
 				}else{
 					errprint("illegal argument for option -- '-%c'\n", c);
 					errflag++;
@@ -127,10 +127,10 @@ int main(int argc, char **argv){
 				choice=optarg[0];
 				switch (choice){
 					case 'y':
-						fast=1;
+						ctx.fast=1;
 						break;
 					case 'n':
-						fast=0;
+						ctx.fast=0;
 						break;
 					default:
 					errflag++;
@@ -139,7 +139,7 @@ int main(int argc, char **argv){
 
 			case 'l':
 				if(optarg[0]!='-'){
-					pwlist_path=optarg;
+					ctx.pwlist_path=optarg;
 				}else{
 					errprint("option requires an argument -- '-%c'\n", c);
 					errflag++;
@@ -168,12 +168,12 @@ int main(int argc, char **argv){
 	}
 
 	/* last argument must be the disk name */
-	path=argv[argc-1];
+	ctx.path=argv[argc-1];
 
 	/* test pwlist file */
-	if(pwlist_path){
-		if(!(f=fopen(pwlist_path,"r"))){
-			errprint("cannot open %s: %s\n",pwlist_path, strerror(errno));
+	if(ctx.pwlist_path){
+		if(!(f=fopen(ctx.pwlist_path,"r"))){
+			errprint("cannot open %s: %s\n",ctx.pwlist_path, strerror(errno));
 			errprint("[FATAL] missing password list file\n");
 			return 0;
 		}else{
@@ -182,65 +182,57 @@ int main(int argc, char **argv){
 	}
 
 	/* read configuration file */
-	if(!read_cfg(&UP,threads, cfg_path, mode, fast)){
+	if(!read_cfg(&ctx.UP, threads, cfg_path, ctx.attack_mode, ctx.fast)){
 		errprint("[FATAL] missing or invalid configuration file\n");
-		exit(EXIT_FAILURE);
-	}
-
-	if(!(crypt_disk=calloc(32,sizeof(char)))){
-		errprint("calloc error!\n");
-		exit(EXIT_FAILURE);
-	}
-	if(!initfs(&header, &iv_mode, &chain_mode, crypt_disk, path, 
-				&encrypted,	slot)){
 		exit(EXIT_FAILURE);
 	}
 
 	system("clear");
 	display_art();
 
-	if(UP.SEL_MOD!=0){
-		print_header(&header);
-		printf("\nATTACKING KEYSLOTS:\n\n");
-		print_keyslot(&header,0);
-		printf("\n");
-	}
+	/* TODO: target selection based on user choice or header parsing goes here 
+	 *
+	 *
+	 * */
 
-	/* Default */
-	for(i=0,c=0;i<8;i++){
-		if(slot[i]){
-			slot_order[c]=i;
-			c++;
-		}
-	}
-	num = c;
-	if(UP.SEL_MOD==4)
-		mod = interface_selection(&header,slot,slot_order,&num, UP.KEY_SEL);
-	else
-		mod = UP.SEL_MOD;
-	if(mod>4 || mod<=0){
-		errprint("Invalid Attack mode selection in configure file\n");
+	/* set prepare function */
+	ctx.init = LUKS_init;
+
+	/* calling the prepare function */
+	if(!ctx.init(&ctx)){
+		errprint("[FATAL] error initializing context\n");
 		exit(EXIT_FAILURE);
 	}
 
+	/*TODO: print should be generic... */
+	if(ctx.UP.SEL_MOD!=0){
+		print_header(&ctx.luks->header);
+		printf("\nATTACKING KEYSLOTS:\n\n");
+		print_keyslot(&ctx.luks->header,0);
+		printf("\n");
+	}
+
+
+
+	/* prepare OpenSSL */
 	OpenSSL_add_all_digests();
 	OpenSSL_add_all_algorithms();
 	OpenSSL_add_all_ciphers();
 
-	printf("Threads:     %d\n", UP.NUM_THR);
-	if(UP.FST_CHK)
+	printf("Threads:     %d\n", ctx.UP.NUM_THR);
+	if(ctx.UP.FST_CHK)
 		printf("Fast check:  Enabled\n");
 	else
 		printf("Fast check:  Disabled\n");
 
 
-	switch(mod){
+	switch(ctx.attack_mode){
 		
 		case 1: /* bruteforce */
 			printf("Attack mode: Bruteforce\n\n");
-			printf("Min len:     %d characters\n", UP.MIN_LEN);
-			printf("Max len:     %d characters\n", UP.MAX_LEN);
-			printf("Alphabet:    %d\n\n", UP.ALP_SET);
+			printf("Min len:     %d characters\n", ctx.UP.MIN_LEN);
+			printf("Max len:     %d characters\n", ctx.UP.MAX_LEN);
+			printf("Alphabet:    %d\n\n", ctx.UP.ALP_SET);
 			if(prompt){
 				printf("Press enter to start cracking!");
 				getchar();
@@ -250,12 +242,13 @@ int main(int argc, char **argv){
 			/* START GLOBAL TIMER */
 			gettimeofday(&t0,NULL);
 
-			set = init_set(&set_len,UP.ALP_SET); 
-			for(j=0;j<num;j++){
-				for(i=UP.MIN_LEN;i<=UP.MAX_LEN;i++){
-					if((res=bruteforce(i, set, set_len, &header, iv_mode, 
-								chain_mode, &encrypted, crypt_disk,
-									slot_order[j],UP.NUM_THR,UP.FST_CHK,UP.PRG_BAR))){
+			set = init_set(&set_len,ctx.UP.ALP_SET); 
+			for(j=0;j<ctx.num_pwds;j++){ /* use this loop to manage multiple 
+											passphrases like keyslots in LUKS */
+
+				ctx.cur_pwd = j;
+				for(i=ctx.UP.MIN_LEN; i<=ctx.UP.MAX_LEN; i++){
+					if((res=bruteforce(i, set, set_len, &ctx))){
 						break;
 					}
 				}
@@ -273,9 +266,11 @@ int main(int argc, char **argv){
 			/* START GLOBAL TIMER */
 			gettimeofday(&t0,NULL);
 
-			for(j=0;j<num;j++){
-				res=pwlist(&header, iv_mode, chain_mode, &encrypted, crypt_disk,
-						slot_order[j],UP.NUM_THR,UP.FST_CHK,UP.PRG_BAR, pwlist_path);
+			for(j=0;j<ctx.num_pwds;j++){ /* use this loop to manage multiple 
+											passphrases like keyslots in LUKS */
+
+				ctx.cur_pwd = j;
+				res=pwlist(&ctx);
 			}
 			break;
 
@@ -283,9 +278,9 @@ int main(int argc, char **argv){
 			/* first call pwlist */
 			printf("Attack mode: Password List first, then Bruteforce\n\n");
 			printf("Settings for Bruteforce:\n");
-			printf("Min len:     %d characters\n", UP.MIN_LEN);
-			printf("Max len:     %d characters\n", UP.MAX_LEN);
-			printf("Alphabet:    %d\n\n", UP.ALP_SET);
+			printf("Min len:     %d characters\n", ctx.UP.MIN_LEN);
+			printf("Max len:     %d characters\n", ctx.UP.MAX_LEN);
+			printf("Alphabet:    %d\n\n", ctx.UP.ALP_SET);
 			if(prompt){
 				printf("Press enter to start cracking!");
 				getchar();
@@ -295,15 +290,15 @@ int main(int argc, char **argv){
 			/* START GLOBAL TIMER */
 			gettimeofday(&t0,NULL);
 
-			for(j=0;j<num;j++){
-				if(!(res=pwlist(&header, iv_mode, chain_mode, &encrypted, crypt_disk,
-							slot_order[j],UP.NUM_THR,UP.FST_CHK,UP.PRG_BAR, pwlist_path))){
+			for(j=0;j<ctx.num_pwds;j++){ /* use this loop to manage multiple 
+											passphrases like keyslots in LUKS */
+
+				ctx.cur_pwd = j;
+				if(!(res=pwlist(&ctx))){
 					/* then call bruteforce */
-					set = init_set(&set_len,UP.ALP_SET); 
-					for(i=UP.MIN_LEN;i<=UP.MAX_LEN;i++){
-						if((res=bruteforce(i, set, set_len, &header, iv_mode, 
-									chain_mode, &encrypted, crypt_disk, 
-									slot_order[j],UP.NUM_THR,UP.FST_CHK,UP.PRG_BAR))){
+					set = init_set(&set_len,ctx.UP.ALP_SET); 
+					for(i=ctx.UP.MIN_LEN; i<=ctx.UP.MAX_LEN; i++){
+						if((res=bruteforce(i, set, set_len, &ctx))){
 							break;
 						}
 					}
@@ -312,7 +307,7 @@ int main(int argc, char **argv){
 			break;
 
 		default:
-			errprint("Invalid Attack Mode\n");
+			errprint("Invalid Attack mode - check command line options or configuration file\n");
 			break;
 
 	}
@@ -324,11 +319,12 @@ int main(int argc, char **argv){
 	print_time(sec);
 
 	/* free memory */
+	/* TODO: must be general */
 	EVP_cleanup();
-	free(encrypted.key);
-	freeheader(&header);
-	free(crypt_disk);
-	if(mod==1||mod==3){
+	free(ctx.luks->encrypted.key);
+	freeheader(&ctx.luks->header);
+	free(ctx.luks->crypt_disk);
+	if(ctx.attack_mode==1 || ctx.attack_mode==3){
 		free(set);
 	}
 	
@@ -338,103 +334,36 @@ int main(int argc, char **argv){
 	return 0;
 }
 
-int interface_selection(pheader *header,int *slot,int *slot_order,int *tot, int key_sel){
+int SKUL_CTX_cpy(SKUL_CTX *dst, SKUL_CTX *src){
 
-	int continua,s,i,num_slot,n,invalid,mod;
-	char *line, ch;
-
-	invalid=0;
-	continua=1;
-	line=NULL;
-	while(continua){
-
-		system("clear");
-		display_art_nosleep();
-		print_header(header);
-		printf("\nACTIVE KEYSLOTS:\n\n");
-		num_slot=0;
-		for(i=0;i<8;i++){
-			if(slot[i]){
-				slot_order[num_slot]=i;
-				num_slot++;
-				print_keyslot(header,i);
-				printf("\n");
-			}
+	dst->target = src->target;
+	dst->init = src->init;
+	dst->clean = src->clean;
+	dst->cpytarget_ctx = src->cpytarget_ctx;
+	dst->UP = src->UP;
+	dst->attack_mode = src->attack_mode;
+	dst->fast = src->fast;
+	dst->num_pwds = dst->num_pwds;
+	
+	if(src->pwlist_path){
+		if((dst->pwlist_path = calloc(strlen(src->pwlist_path),sizeof(char)))==NULL){
+			errprint("Malloc Error\n");
+			return 0;
 		}
-
-		if(invalid)
-			printf("Invalid selection!");
-		invalid=0;
-		if(key_sel){
-			printf("\nSelect keyslots to attack in the desired order (0,1,2):\n$ ");
-			line = readline(stdin, &n);
-			if(n<=0)
-				continue;
-			for(i=0;i<n;i+=2){
-				sscanf(line+i,"%d,",&s);
-				if(s<0 || s>7){
-					invalid=1;
-					break;
-				}
-				if(!slot[s]){
-					invalid=1;
-					break;
-				}
-			}
-			if(invalid)
-				continue;
-			for(i=0;i<=n;i+=2){
-				num_slot=0;
-				sscanf(line+i,"%d",&s);
-				slot_order[num_slot]=s;
-				num_slot++;
-			}
-		}
-		continua=0;
+		memcpy(&(dst->pwlist_path), &(src->pwlist_path), strlen(src->pwlist_path)*sizeof(char));
 	}
 
-	continua=1;
-	while(continua){
 
-		if(key_sel){
-			system("clear");
-			display_art_nosleep();
-			print_header(header);
-			printf("\nSELECTED KEYSLOTS: %d\n\n", num_slot);
-			for(i=0;i<num_slot;i++){
-				print_keyslot(header,slot_order[i]);
-				printf("\n");
-			}
+	if(src->path){
+		if((dst->path = calloc(strlen(src->path),sizeof(char)))==NULL){
+			errprint("Malloc Error\n");
+			return 0;
 		}
-		else{
-			system("clear");
-			display_art_nosleep();
-			print_header(header);
-			printf("\nACTIVE KEYSLOTS:\n\n");
-			for(i=0;i<8;i++){
-				if(slot[i]){
-					print_keyslot(header,i);
-					printf("\n");
-				}
-			}
-
-		
-		}
-
-		if(invalid)
-			printf("Invalid selection!");
-		invalid=0;
-		printf("\nSelect attack mode:\n1) bruteforce\n2) password list\n3) password list and bruteforce\n$ ");
-		ch = getchar();
-		mod = atoi(&ch);
-		if((mod!=3) && (mod!=1) && (mod!=2)){
-			invalid=1;
-			continue;
-		}
-		continua=0;
+		memcpy(&(dst->path), &(src->path), strlen(src->path)*sizeof(char));
 	}
 
-	*tot=num_slot;
-	free(line);
-	return mod;
+	src->init(dst);
+	src->cpytarget_ctx(dst, src);
+
+	return 1;
 }

@@ -38,32 +38,31 @@
 #include <signal.h>
 
 #define DEBUG 0
-
 pthread_cond_t condition_cond = PTHREAD_COND_INITIALIZER;
 pthread_mutex_t condition_mutex = PTHREAD_MUTEX_INITIALIZER;
 
-int thlist_datainit(thlist_data *arg, int id, char **list, int num, 
-		pheader *header, int iv_mode, int chain_mode, lkey_t *encrypted, 
-		char *crypt_disk, int fast_check,int max_l, int keyslot, 
-		int *progress, char *win_pwd){
+int thlist_datainit(thlist_data *arg, SKUL_CTX *ctx, int id, char **list, int num, 
+		int max_l, int *progress, char *win_pwd){
 
 	int i,l;
 
 	arg->id=id;
 	arg->num=num;
-	arg->iv_mode=iv_mode;
-	arg->chain_mode=chain_mode;
-	arg->fast_check=fast_check;
 	arg->max_l=max_l;
-	arg->keyslot=keyslot;
 	arg->progress=progress;
 	arg->win_pwd=win_pwd;
+
+	if(!SKUL_CTX_cpy(&(arg->ctx), ctx)){
+		errprint("Error in SKUL CTX copy\n");
+		return 0;
+	}
 
 	/* set the list of password for the curent thread */
 	if((arg->list = calloc(num,sizeof(char *)))==NULL){
 		errprint("malloc error\n");
 		return 0;
 	}
+
 	for(i=0;i<num;i++){
 		l=strlen(list[i]);
 		if((arg->list[i]=calloc(l,sizeof(char)))==NULL){
@@ -73,110 +72,34 @@ int thlist_datainit(thlist_data *arg, int id, char **list, int num,
 		memcpy(arg->list[i],list[i],l);
 	}
 
-	/* create a copy of the key for the current thread */
-	if((arg->encrypted.key=calloc(encrypted->keylen,sizeof(char)))==NULL){
-		errprint("malloc error!\n");
-		return 0;
-	}
-	arg->encrypted.keylen=encrypted->keylen;
-	memcpy(arg->encrypted.key,encrypted->key,encrypted->keylen);
-	
-	/* create a copy of the header for the current thread */
-	if(!alloc_header(&(arg->header))){
-		errprint("alloc_header error!\n");
-		return 0;
-	}
-	memcpy(&(arg->header), header, sizeof(pheader));
-
-	/* create a copy of the encrypted disk for the current thread */
-	if((arg->crypt_disk = calloc(32,sizeof(char *)))==NULL){
-		errprint("malloc error\n");
-		return 0;
-	}
-	memcpy(arg->crypt_disk, crypt_disk, 32);
-
-	/* set the correct pbk_hash */
-	if(strcmp(header->hash_spec, "sha1")==0){
-		arg->pbk_hash=SHA_ONE;
-	}else if(strcmp(header->hash_spec, "sha256")==0){
-		arg->pbk_hash=SHA_TWO_FIVE_SIX;
-	}else if(strcmp(header->hash_spec, "sha512")==0){
-		arg->pbk_hash=SHA_FIVE_ONE_TWO;
-	}else if(strcmp(header->hash_spec, "ripemd160")==0){
-		arg->pbk_hash=RIPEMD;
-	}else{
-		errprint("Unsupported hash function\n");
-		return 0;
-	}
-
-
 	return 1;	
 }
 
-int thforce_datainit(thforce_data *arg, int id, int start, int num,	
-		int comb, int len, int set_len, pheader *header, int iv_mode,
-		int chain_mode, lkey_t *encrypted, char *crypt_disk, 
-		int fast_check, char *set, int keyslot, int *progress,
+int thforce_datainit(thforce_data *arg, SKUL_CTX *ctx, int id, int start, int num,	
+		int comb, int len, int set_len, char *set, int *progress,
 		char *win_pwd){
 
 	arg->id=id;
 	arg->start=start;
 	arg->num=num;
+	arg->comb=comb;
 	arg->len=len;
 	arg->set_len=set_len;
-	arg->comb=comb;
-	arg->iv_mode=iv_mode;
-	arg->chain_mode=chain_mode;
-	arg->fast_check=fast_check;
-	arg->keyslot=keyslot;
 	arg->progress=progress;
 	arg->win_pwd=win_pwd;
-	
+	if(!SKUL_CTX_cpy(&(arg->ctx), ctx)){
+		errprint("Error in SKUL CTX copy\n");
+		return 0;
+	}
+/*	printf("Here!\n");
+	fflush(stdout);*/
 
-	/* create a copy of the key for the current thread */
-	if((arg->encrypted.key=calloc(encrypted->keylen,sizeof(char)))==NULL){
-		errprint("malloc error!\n");
-		return 0;
-	}
-	arg->encrypted.keylen=encrypted->keylen;
-	memcpy(arg->encrypted.key,encrypted->key,encrypted->keylen);
-	
-	/* create a copy of the header for the current thread */
-	if(!alloc_header(&(arg->header))){
-		errprint("alloc_header error!\n");
-		return 0;
-	}
-	memcpy(&(arg->header), header, sizeof(pheader));
-/*	print_header(&(arg->header));*/
-
-	/* create a copy of the encrypted disk for the current thread */
-	if((arg->crypt_disk = calloc(32,sizeof(char *)))==NULL){
-		errprint("malloc error\n");
-		return 0;
-	}
-	memcpy(arg->crypt_disk, crypt_disk, 32);
-	
 	/* create a copy of the set for the current thread */
 	if((arg->set = calloc(set_len,sizeof(char *)))==NULL){
 		errprint("malloc error\n");
 		return 0;
 	}
 	memcpy(arg->set, set, set_len);
-
-	/* set the correct pbk_hash */
-	if(strcmp(header->hash_spec, "sha1")==0){
-		arg->pbk_hash=SHA_ONE;
-	}else if(strcmp(header->hash_spec, "sha256")==0){
-		arg->pbk_hash=SHA_TWO_FIVE_SIX;
-	}else if(strcmp(header->hash_spec, "sha512")==0){
-		arg->pbk_hash=SHA_FIVE_ONE_TWO;
-	}else if(strcmp(header->hash_spec, "ripemd160")==0){
-		arg->pbk_hash=RIPEMD;
-	}else{
-		errprint("Unsupported hash function\n");
-		return 0;
-	}
-
 
 	return 1;
 }
@@ -197,17 +120,14 @@ void *th_force(void *param){
 
 	for (i=0;i<d->comb;i++) {
 		n = i;
-		guess[0]=d->set[d->start + (i % d->num)];
+		guess[d->len-1]=d->set[d->start + (i % d->num)];
 		n/= d->num;
-		for (k=1; k<d->len; k++){
+		for (k=d->len-2; k>=0; k--){
 			guess[k] = d->set[n % d->set_len]; 
 			n /= d->set_len;
 		}
 
-		
-		found = open_key(guess, d->len, &(d->header), d->iv_mode, 
-				d->chain_mode, &(d->encrypted), d->crypt_disk,
-				d->fast_check, d->keyslot, d->pbk_hash);
+		found = d->ctx.open_key(guess, d->len, &(d->ctx));
 		
 		*(d->progress)=*(d->progress) + 1;
 
@@ -241,9 +161,7 @@ void *th_list(void *param){
 		
 		*(d->progress)= *(d->progress)+1;
 		len = strlen(d->list[j]);
-		found = open_key(d->list[j], len, &(d->header), d->iv_mode, 
-				d->chain_mode, &(d->encrypted), d->crypt_disk, 
-				d->fast_check, d->keyslot, d->pbk_hash);
+		found = luks_open_key(d->list[j], len, &(d->ctx));
 
 		if(found){
 
@@ -354,8 +272,8 @@ void *test_force(void *param){
 	}
 
 	*(d->progress)=0;
-
 	found=0;
+
 	for (i=0;i<d->comb;i++) {
 		n = i;
 		guess[0]=d->set[d->start + (i % d->num)];
@@ -366,9 +284,7 @@ void *test_force(void *param){
 		}
 
 		
-		found = open_key(guess, d->len, &(d->header), d->iv_mode, 
-				d->chain_mode, &(d->encrypted), d->crypt_disk,
-				d->fast_check, d->keyslot, d->pbk_hash);
+		found = d->ctx.open_key(guess, d->len, &(d->ctx));
 		
 		*(d->progress)=*(d->progress) + 1;
 
@@ -378,7 +294,7 @@ void *test_force(void *param){
 			pthread_mutex_lock(&condition_mutex);
 			pthread_cond_signal(&condition_cond);
 
-			memset(d->win_pwd,0,d->len+1);
+			memset(d->win_pwd,0,d->len);
 			sprintf(d->win_pwd,"%s",guess);
 
 			/* exiting mutex section */
@@ -400,9 +316,7 @@ void *test_list(void *param){
 		
 		*(d->progress)= *(d->progress)+1;
 		len = strlen(d->list[j]);
-		found = open_key(d->list[j], len, &(d->header), d->iv_mode, 
-				d->chain_mode, &(d->encrypted), d->crypt_disk, 
-				d->fast_check, d->keyslot, d->pbk_hash);
+		found = luks_open_key(d->list[j], len, &(d->ctx));
 
 		if(found){
 
@@ -417,9 +331,11 @@ void *test_list(void *param){
 			pthread_mutex_unlock(&condition_mutex);
 		}
 	}
-	
+
 	for(j=0;j<d->num;j++){
 		free(d->list[j]);
 	}
 	pthread_exit(NULL);
 }
+
+
