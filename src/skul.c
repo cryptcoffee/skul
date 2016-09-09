@@ -59,11 +59,8 @@ int main(int argc, char **argv){
 	FILE *f;
 	SKUL_CTX ctx;
 
-	/* SKUL INIT FUNCTION? */
-	ctx.attack_mode=UNSET;
-	ctx.fast = UNSET;
-	ctx.pwlist_path = NULL;
-	/*---------------------*/
+
+	SKUL_CTX_init(&ctx);
 
 	set = NULL;
 	/* check arguments */
@@ -319,11 +316,9 @@ int main(int argc, char **argv){
 	print_time(sec);
 
 	/* free memory */
-	/* TODO: must be general */
 	EVP_cleanup();
-	free(ctx.luks->encrypted.key);
-	freeheader(&ctx.luks->header);
-	free(ctx.luks->crypt_disk);
+
+	ctx.clean_target_ctx(&ctx);
 	if(ctx.attack_mode==1 || ctx.attack_mode==3){
 		free(set);
 	}
@@ -334,12 +329,23 @@ int main(int argc, char **argv){
 	return 0;
 }
 
+void SKUL_CTX_init(SKUL_CTX *ctx){
+	
+	ctx->attack_mode=UNSET;
+	ctx->fast = UNSET;
+	ctx->pwlist_path = NULL;
+	ctx->target = LUKS; // default
+	ctx->path = NULL;
+	ctx->num_pwds = 1; // default.. for you ax :*
+
+}
+
 int SKUL_CTX_cpy(SKUL_CTX *dst, SKUL_CTX *src){
 
 	dst->target = src->target;
 	dst->init = src->init;
-	dst->clean = src->clean;
-	dst->cpytarget_ctx = src->cpytarget_ctx;
+	dst->clean_target_ctx = src->clean_target_ctx;
+	dst->cpy_target_ctx = src->cpy_target_ctx;
 	dst->UP = src->UP;
 	dst->attack_mode = src->attack_mode;
 	dst->fast = src->fast;
@@ -363,7 +369,7 @@ int SKUL_CTX_cpy(SKUL_CTX *dst, SKUL_CTX *src){
 	}
 
 	src->init(dst);
-	src->cpytarget_ctx(dst, src);
+	src->cpy_target_ctx(dst, src);
 
 	return 1;
 }

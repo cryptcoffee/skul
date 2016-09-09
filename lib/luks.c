@@ -47,8 +47,9 @@ int LUKS_init(SKUL_CTX *ctx){
 	int c,num,mod,i;
 
 	ctx->target = LUKS;
-	ctx->cpytarget_ctx = LUKS_CTXcpy;
+	ctx->cpy_target_ctx = LUKS_CTXcpy;
 	ctx->open_key = luks_open_key;
+	ctx->clean_target_ctx = LUKS_clean;
 
 	if(!(ctx->luks = calloc(1,sizeof(LUKS_CTX)))){
 		errprint("calloc error\n");
@@ -104,6 +105,15 @@ int LUKS_init(SKUL_CTX *ctx){
 	ctx->num_pwds = ctx->luks->slot_number; 
 
 	return 1;
+
+}
+
+void LUKS_clean(SKUL_CTX *ctx){
+	
+	freeheader(&(ctx->luks->header));
+	free(ctx->luks->encrypted.key);
+	free(ctx->luks->crypt_disk);
+	free(ctx->luks);
 
 }
 

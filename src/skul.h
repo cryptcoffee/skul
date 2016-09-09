@@ -30,8 +30,8 @@ typedef struct skul_ctx{
 	
 	target_t target;
 	int (*init)();
-	int (*clean)();
-	int (*cpytarget_ctx)();
+	void (*clean_target_ctx)();
+	int (*cpy_target_ctx)();
 	int (*open_key)();
 	usrp UP;
 	int attack_mode;
@@ -46,12 +46,13 @@ typedef struct skul_ctx{
 
 }SKUL_CTX;
 
+void SKUL_CTX_init(SKUL_CTX *ctx);
 int SKUL_CTX_cpy(SKUL_CTX *dst, SKUL_CTX *src);
 
 
 /* Functions for LUKS */
 int LUKS_init(SKUL_CTX *ctx);
-int LUKS_clean(SKUL_CTX *ctx);
+void LUKS_clean(SKUL_CTX *ctx);
 int LUKS_CTXcpy(SKUL_CTX *dest, SKUL_CTX *surc);
 
 

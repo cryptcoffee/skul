@@ -27,8 +27,8 @@ DBG = -g -Xlinker -Map=output.map
 # Compiling macros
 CC = gcc 
 #OPT = -Wall -pedantic -ansi -Wno-pointer-sign -D _DEFAULT_SOURCE -D_XOPEN_SOURCE=700 -D_REENTRANT -DPURIFY -O3 _BSD_SOURCE 
-OPT = -Wall -pedantic -std=c99 -Wno-pointer-sign -O0 
-COMP = $(CC) $(OPT) -g
+OPT = -Wall -pedantic -std=c99 -Wno-pointer-sign -O3
+COMP = $(CC) $(OPT) 
 COMPDBG = $(COMP) $(DBG)
 
 # working directories
