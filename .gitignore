@@ -5,3 +5,5 @@ output.map
 skul_dbg
 .DS_Store
 tests
+args_test
+args_test.c

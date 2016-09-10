@@ -35,12 +35,11 @@
 #include "openssl/evp.h"
 #include "openssl/sha.h"
 #include "openssl/aes.h"
-#include "utils.h"
-#include "af.h"
+#include "../utils.h"
+#include "../crypto/af.h"
+#include "../crypto/fastpbkdf2.h"
 #include "decrypt.h"
-#include "skulfs.h"
 
-#include "fastpbkdf2.h"
 
 
 int decrypt(int mode, unsigned char *key, unsigned char *encryptedData, 

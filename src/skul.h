@@ -1,9 +1,9 @@
 #ifndef __SKUL_H__
 #define __SKUL_H__
 
-#include "../lib/skulfs.h"
+#include <stdint.h>
 #include "../lib/config.h"
-#include "../lib/luks.h"
+#include "../lib/luks/luks.h"
 
 /* for testing purposes only 
  * #define TESTING 

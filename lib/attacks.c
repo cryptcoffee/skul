@@ -28,7 +28,6 @@
 #include "../src/skul.h"
 #include "errno.h"
 #include <string.h>
-#include "alloclib.h"
 #include "utils.h"
 #include <sys/time.h>
 #include <math.h>

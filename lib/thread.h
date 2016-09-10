@@ -28,7 +28,6 @@
 #define THREAD_H
 
 #define _GNU_SOURCE
-#include"skulfs.h" 
 #include"../src/skul.h"
 #include<pthread.h>
 	

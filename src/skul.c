@@ -33,14 +33,10 @@
 #include "openssl/sha.h"
 #include "openssl/aes.h"
 #include <endian.h>
-#include "../lib/skulfs.h"
 #include "../lib/utils.h"
-#include "../lib/alloclib.h"
-#include "../lib/decrypt.h"
 #include "../lib/config.h"
 #include "../lib/thread.h"
 #include "../lib/attacks.h"
-#include "../lib/luks.h"
 #include "skul.h"
 #include <stdint.h>
 #include <inttypes.h>

@@ -27,8 +27,7 @@
 #ifndef _DECRYPT_H_
 #define _DECRYPT_H_
 
-#include "skulfs.h"
-#include "../src/skul.h"
+#include "../../src/skul.h"
 #include <openssl/evp.h>
 
 #define ECB 1

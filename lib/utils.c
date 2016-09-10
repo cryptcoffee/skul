@@ -30,6 +30,8 @@
 #include <sys/types.h>
 #include <stdarg.h>
 #include <unistd.h>
+#include <stdio.h>
+#include <stdlib.h>
 
 void print_help(){
 #ifdef SKUL_FIX
@@ -233,3 +235,83 @@ void display_art(){
 void display_art_nosleep(){
 	print_art(0,0);	
 }
+
+char *readline(FILE *f, int *max_l){
+	
+	char *p,c;
+	int size=2, n=0;
+	
+
+	if(!(p=calloc(size,sizeof(char)))){
+		errprint("calloc error\n");
+		return NULL;
+	}
+	while((c=fgetc(f)) != EOF){
+		
+		if(n>=size){
+			size*=2;
+			if(!(p=realloc(p,size))){
+				errprint("realloc error\n");
+			}
+		}
+		if(c=='\n'){
+			p[n]='\0';
+			break;
+		}
+		p[n]=c;
+		n++;
+	}
+	*max_l = n;
+	if(c==EOF){
+		return NULL;
+	}
+	return (p?p:NULL);
+}
+
+int uint32read(uint32_t *res, FILE *stream){
+
+	uint8_t uint0,uint1,uint2,uint3;
+	int r=1;
+
+	if(fread(&uint0,sizeof(uint8_t),1,stream)<1){
+		r=0;
+		goto end;
+	}
+	if(fread(&uint1,1,sizeof(uint8_t),stream)<1){
+		r=0;
+		goto end;
+	}
+	if(fread(&uint2,1,sizeof(uint8_t),stream)<1){
+		r=0;
+		goto end;
+	}
+	if(fread(&uint3,1,sizeof(uint8_t),stream)<1){
+		r=0;
+		goto end;
+	}
+	*res = uint0 << 24 | uint1 << 16 | uint2 << 8 | uint3;
+
+end:
+	if(r == 0){
+		res = NULL;
+	}
+	return r;
+}
+
+int uint16read(uint16_t *res, FILE *stream){
+
+	uint8_t uint0,uint1;
+
+	if(fread(&uint0,1,sizeof(uint8_t),stream)<1){
+		res = NULL;
+		return 0;
+	}
+	if(fread(&uint1,1,sizeof(uint8_t),stream)<1){
+		res = NULL;
+		return 0;
+	}
+	*res = uint0 << 8 | uint1;
+	return 1;
+}
+
+

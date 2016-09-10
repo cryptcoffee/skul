@@ -28,6 +28,7 @@
 #define _UTILS_H_
 
 #include <stdint.h>
+#include <stdio.h>
 void print_format(unsigned long val);
 void print_time(unsigned long sec);
 int errprint(const char *format, ...);
@@ -41,5 +42,8 @@ void display_art_nosleep();
 void print_help();
 void print_version();
 void print_small_help();
+char *readline(FILE *f, int *max_l);
+int uint16read(uint16_t *res, FILE *stream);
+int uint32read(uint32_t *res, FILE *stream);
 
 #endif

@@ -31,7 +31,6 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <errno.h>
-#include "alloclib.h"
 
 int read_cfg(usrp *UP, int threads, char *cfg_path, int mode, int fast){
 
