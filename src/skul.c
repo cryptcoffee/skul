@@ -45,11 +45,46 @@
 #include <sys/time.h>
 #include <getopt.h>
 
+int parse_ord(SKUL_CTX *ctx, char *pwd_ord){
+
+	char c;
+	int n,i=0,j=0,len;
+
+	if(strlen(pwd_ord)%2==0){
+		/*0,1,2, is incorrect. 0,1,2 is correct*/
+		errprint("Incorrect password order format.\nTry 'skul -h' for more information.\n");
+		return 0;
+	}
+	pwd_ord[strlen(pwd_ord)]='\n';
+	len = strlen(pwd_ord)/2+1;
+	ctx->pwd_ord = realloc(ctx->pwd_ord, len);
+
+	c = pwd_ord[i];
+	while(c!='\n'){
+		if(i%2==0){
+			n=c-'0';
+			ctx->pwd_ord[j]=n;
+			j++;
+		}else{
+			if(c!=','){
+				errprint("Incorrect password order format.\nTry 'skul -h' for more information.\n");
+				return 0;
+			}
+		}
+
+		i++;
+		c = pwd_ord[i];
+	}
+	ctx->num_pwds = i/2+1;
+	ctx->pwd_default=0;
+
+	return 1;
+}
 
 int main(int argc, char **argv){
 	
 	char *set, *cfg_path=NULL; 
-	int i,set_len, j,res=0,threads=0, prompt=1, errflag=0;
+	int i,set_len, j,res=0,threads=0, prompt=1, errflag=0,found=0;
 	struct timeval t0,t1;
 	unsigned long sec;
 	FILE *f;
@@ -69,7 +104,7 @@ int main(int argc, char **argv){
 		char c, choice;
 		int arg;
 		
-		c = getopt(argc, argv, "hvm:c:t:nf:l:");
+		c = getopt(argc, argv, "hvm:c:t:nf:l:o:");
 		if (c == -1) {
 			break;
 		}
@@ -133,6 +168,17 @@ int main(int argc, char **argv){
 			case 'l':
 				if(optarg[0]!='-'){
 					ctx.pwlist_path=optarg;
+				}else{
+					errprint("option requires an argument -- '-%c'\n", c);
+					errflag++;
+				}
+				break;
+
+			case 'o':
+				if(optarg[0]!='-'){
+					if(!parse_ord(&ctx, optarg)){
+						exit(EXIT_FAILURE);
+					}
 				}else{
 					errprint("option requires an argument -- '-%c'\n", c);
 					errflag++;
@@ -239,12 +285,15 @@ int main(int argc, char **argv){
 			for(j=0;j<ctx.num_pwds;j++){ /* use this loop to manage multiple 
 											passphrases like keyslots in LUKS */
 
-				ctx.cur_pwd = j;
+				ctx.cur_pwd = ctx.pwd_ord[j];
 				for(i=ctx.UP.MIN_LEN; i<=ctx.UP.MAX_LEN; i++){
 					if((res=bruteforce(i, set, set_len, &ctx))){
+						found=1;
 						break;
 					}
 				}
+				if(found)
+					break;
 			}
 			break;
 
@@ -262,8 +311,10 @@ int main(int argc, char **argv){
 			for(j=0;j<ctx.num_pwds;j++){ /* use this loop to manage multiple 
 											passphrases like keyslots in LUKS */
 
-				ctx.cur_pwd = j;
+				ctx.cur_pwd = ctx.pwd_ord[j];
 				res=pwlist(&ctx);
+				if(res)
+					break;
 			}
 			break;
 
@@ -286,16 +337,19 @@ int main(int argc, char **argv){
 			for(j=0;j<ctx.num_pwds;j++){ /* use this loop to manage multiple 
 											passphrases like keyslots in LUKS */
 
-				ctx.cur_pwd = j;
+				ctx.cur_pwd = ctx.pwd_ord[j];
 				if(!(res=pwlist(&ctx))){
 					/* then call bruteforce */
 					set = init_set(&set_len,ctx.UP.ALP_SET); 
 					for(i=ctx.UP.MIN_LEN; i<=ctx.UP.MAX_LEN; i++){
 						if((res=bruteforce(i, set, set_len, &ctx))){
+							found=1;
 							break;
 						}
 					}
 				}
+				if(res || found)
+					break;
 			}
 			break;
 
@@ -332,7 +386,12 @@ void SKUL_CTX_init(SKUL_CTX *ctx){
 	ctx->pwlist_path = NULL;
 	ctx->target = LUKS; // default
 	ctx->path = NULL;
-	ctx->num_pwds = 1; // default.. for you ax :*
+	
+	// default.. for you ax :*
+	ctx->pwd_default = 1;
+	ctx->num_pwds = 1; 	
+	ctx->pwd_ord = calloc(ctx->num_pwds, sizeof(int));
+	ctx->pwd_ord[0] = 0;
 
 }
 
@@ -342,17 +401,26 @@ int SKUL_CTX_cpy(SKUL_CTX *dst, SKUL_CTX *src){
 	dst->init = src->init;
 	dst->clean_target_ctx = src->clean_target_ctx;
 	dst->cpy_target_ctx = src->cpy_target_ctx;
+	dst->open_key = src->open_key;
 	dst->UP = src->UP;
 	dst->attack_mode = src->attack_mode;
 	dst->fast = src->fast;
-	dst->num_pwds = dst->num_pwds;
-	
+	dst->pwd_default = src->num_pwds;
+	dst->num_pwds = src->num_pwds;
+	dst->cur_pwd = src->cur_pwd;
+
+	if((dst->pwd_ord = calloc(dst->num_pwds,sizeof(int)))==NULL){
+		errprint("Malloc Error\n");
+		return 0;
+	}
+	memcpy(dst->pwd_ord, src->pwd_ord, dst->num_pwds);
+
 	if(src->pwlist_path){
 		if((dst->pwlist_path = calloc(strlen(src->pwlist_path),sizeof(char)))==NULL){
 			errprint("Malloc Error\n");
 			return 0;
 		}
-		memcpy(&(dst->pwlist_path), &(src->pwlist_path), strlen(src->pwlist_path)*sizeof(char));
+		memcpy(dst->pwlist_path, src->pwlist_path, strlen(src->pwlist_path)*sizeof(char));
 	}
 
 
@@ -361,10 +429,9 @@ int SKUL_CTX_cpy(SKUL_CTX *dst, SKUL_CTX *src){
 			errprint("Malloc Error\n");
 			return 0;
 		}
-		memcpy(&(dst->path), &(src->path), strlen(src->path)*sizeof(char));
+		memcpy(dst->path, src->path, strlen(src->path)*sizeof(char));
 	}
 
-	src->init(dst);
 	src->cpy_target_ctx(dst, src);
 
 	return 1;

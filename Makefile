@@ -28,7 +28,7 @@ DBG = -g -Xlinker -Map=output.map
 CC = gcc 
 #OPT = -Wall -pedantic -ansi -Wno-pointer-sign -D _DEFAULT_SOURCE -D_XOPEN_SOURCE=700 -D_REENTRANT -DPURIFY -O3 _BSD_SOURCE 
 OPT = -Wall -pedantic -std=c99 -Wno-pointer-sign -O3
-COMP = $(CC) $(OPT) 
+COMP = $(CC) $(OPT) $(DBG)
 COMPDBG = $(COMP) $(DBG)
 
 # working directories

@@ -10,10 +10,8 @@
  * */ 
 
 #define SKUL_MAJOR 0
-#define SKUL_MINOR 2
-/* Comment SKUL_FIX if there is no
- * hotfix in this version */
-#define SKUL_FIX 1
+#define SKUL_MINOR 3
+#define SKUL_FIX 0
 
 /* debug and warnings
  * #define DEBUG 
@@ -38,8 +36,12 @@ typedef struct skul_ctx{
 	char *pwlist_path;
 	char *path;					/* path of the encrypted target */
 	int fast;					/* maybe put it in the luks_ctx? */
+
+	/* multiple password management */
+	int pwd_default;
 	int num_pwds;
 	int cur_pwd;
+	int *pwd_ord;
 
 	LUKS_CTX *luks;
 	/* other contexts goes here */

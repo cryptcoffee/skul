@@ -48,9 +48,6 @@ typedef struct luks_ctx{
 	int chain_mode;
 	int pbk_hash;
 	int slot[8];
-	int slot_order[8];
-	int slot_number;
-	int cur_slot;
 	unsigned char *crypt_disk;
 	lkey_t encrypted;
 	pheader header;

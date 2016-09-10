@@ -34,7 +34,7 @@
 #include <stdlib.h>
 
 void print_help(){
-#ifdef SKUL_FIX
+#if SKUL_FIX
 	printf("Cryptcoffee - Skul %d.%d.%d\n", SKUL_MAJOR, SKUL_MINOR, SKUL_FIX);
 #else
 	printf("Cryptcoffee - Skul %d.%d\n", SKUL_MAJOR, SKUL_MINOR);
@@ -79,7 +79,7 @@ void print_small_help(){
 }
 
 void print_version(){
-#ifdef SKUL_FIX
+#if SKUL_FIX
 	printf("Cryptcoffee - Skul %d.%d.%d\n", SKUL_MAJOR, SKUL_MINOR, SKUL_FIX);
 #else
 	printf("Cryptcoffee - Skul %d.%d\n", SKUL_MAJOR, SKUL_MINOR);

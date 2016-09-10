@@ -47,7 +47,7 @@ int LUKS_pheadercpy(pheader *dst, pheader *src){
 
 int LUKS_init(SKUL_CTX *ctx){
 
-	int c,num,mod,i;
+	int c,mod,i;
 
 	ctx->target = LUKS;
 	ctx->cpy_target_ctx = LUKS_CTXcpy;
@@ -69,27 +69,43 @@ int LUKS_init(SKUL_CTX *ctx){
 		return 0;
 	}
 
-	/* Default */
-	for(i=0,c=0;i<8;i++){
-		if(ctx->luks->slot[i]){
-			ctx->luks->slot_order[c]=i;
-			c++;
+	if(ctx->pwd_default){
+		/* Default */
+		ctx->pwd_ord = realloc(ctx->pwd_ord,8);
+		for(i=0,c=0;i<8;i++){
+			if(ctx->luks->slot[i]){
+				ctx->pwd_ord[c]=i;
+				c++;
+			}
+		}
+	}else{
+		for(i=0,c=0; i<ctx->num_pwds && i<8; i++){
+			if(ctx->luks->slot[ctx->pwd_ord[i]]){
+				if(ctx->pwd_ord[i]>8 || ctx->pwd_ord[i]<0){
+					errprint("Invalid keyslot.\nTry 'skul -h' for more information\n");
+					return 0;
+				}else{
+					c++;
+				}
+			}else{
+				errprint("Keyslot %d not enabled\n", ctx->pwd_ord[i]);
+				return 0;
+			}
 		}
 	}
-	num = c;
-	if(ctx->UP.SEL_MOD==4)
-		mod = interface_selection(&ctx->luks->header,ctx->luks->slot,
-				ctx->luks->slot_order, &num, ctx->UP.KEY_SEL);
-	else
-		mod = ctx->UP.SEL_MOD;
-	if(mod>4 || mod<=0){
-		printf("%d\n",ctx->UP.SEL_MOD);
-		errprint("Invalid Attack mode selection in configure file\n");
+	ctx->num_pwds=c;
+	if(ctx->num_pwds==0){
+		errprint("Cannot found any active keyslot.\nTry not specifying any keyslot with the -o option.\n");
+		return 0;
+	}
+
+	mod = ctx->UP.SEL_MOD;
+	if(mod>3 || mod<0){
+		errprint("Invalid Attack mode selection.\nTry 'skul -h' for more information\n");
 		return 0;
 	}
 
 	ctx->attack_mode=mod;
-	ctx->luks->slot_number=num;
 
 	/* set the correct pbk_hash */
 	if(strcmp(ctx->luks->header.hash_spec, "sha1")==0){
@@ -104,8 +120,6 @@ int LUKS_init(SKUL_CTX *ctx){
 		errprint("Unsupported hash function\n");
 		return 0;
 	}
-
-	ctx->num_pwds = ctx->luks->slot_number; 
 
 	return 1;
 
@@ -124,18 +138,19 @@ int LUKS_CTXcpy(SKUL_CTX *dst, SKUL_CTX *src){
 
 	int i;
 
+	if(!(dst->luks = calloc(1,sizeof(LUKS_CTX)))){
+		errprint("calloc error\n");
+		return 0;
+	}
+
 	dst->luks->encrypted.keylen = src->luks->encrypted.keylen;
 	
 	dst->luks->iv_mode = src->luks->iv_mode;
 	dst->luks->chain_mode = src->luks->chain_mode;
 	dst->luks->pbk_hash = src->luks->pbk_hash;
-	dst->luks->slot_number = src->luks->slot_number;
-	dst->luks->cur_slot = src->luks->cur_slot;
-
 
 	for(i=0;i<8;i++){
 		dst->luks->slot[i] = src->luks->slot[i];
-		dst->luks->slot_order[i] = src->luks->slot_order[i];
 	}
 
 	if(!alloc_header(&(dst->luks->header))){
@@ -239,109 +254,6 @@ void freeheader(pheader *header){
 			fprintf(stderr,"	->keyslot[%d]: salt deallocated\n",i);
 	}
 	
-}
-
-
-
-int interface_selection(pheader *header,int *slot,int *slot_order,int *tot, int key_sel){
-
-	int continua,s,i,num_slot,n,invalid,mod;
-	char *line, ch;
-
-	invalid=0;
-	continua=1;
-	line=NULL;
-	while(continua){
-
-		system("clear");
-		display_art_nosleep();
-		print_header(header);
-		printf("\nACTIVE KEYSLOTS:\n\n");
-		num_slot=0;
-		for(i=0;i<8;i++){
-			if(slot[i]){
-				slot_order[num_slot]=i;
-				num_slot++;
-				print_keyslot(header,i);
-				printf("\n");
-			}
-		}
-
-		if(invalid)
-			printf("Invalid selection!");
-		invalid=0;
-		if(key_sel){
-			printf("\nSelect keyslots to attack in the desired order (0,1,2):\n$ ");
-			line = readline(stdin, &n);
-			if(n<=0)
-				continue;
-			for(i=0;i<n;i+=2){
-				sscanf(line+i,"%d,",&s);
-				if(s<0 || s>7){
-					invalid=1;
-					break;
-				}
-				if(!slot[s]){
-					invalid=1;
-					break;
-				}
-			}
-			if(invalid)
-				continue;
-			for(i=0;i<=n;i+=2){
-				num_slot=0;
-				sscanf(line+i,"%d",&s);
-				slot_order[num_slot]=s;
-				num_slot++;
-			}
-		}
-		continua=0;
-	}
-
-	continua=1;
-	while(continua){
-
-		if(key_sel){
-			system("clear");
-			display_art_nosleep();
-			print_header(header);
-			printf("\nSELECTED KEYSLOTS: %d\n\n", num_slot);
-			for(i=0;i<num_slot;i++){
-				print_keyslot(header,slot_order[i]);
-				printf("\n");
-			}
-		}
-		else{
-			system("clear");
-			display_art_nosleep();
-			print_header(header);
-			printf("\nACTIVE KEYSLOTS:\n\n");
-			for(i=0;i<8;i++){
-				if(slot[i]){
-					print_keyslot(header,i);
-					printf("\n");
-				}
-			}
-
-		
-		}
-
-		if(invalid)
-			printf("Invalid selection!");
-		invalid=0;
-		printf("\nSelect attack mode:\n1) bruteforce\n2) password list\n3) password list and bruteforce\n$ ");
-		ch = getchar();
-		mod = atoi(&ch);
-		if((mod!=3) && (mod!=1) && (mod!=2)){
-			invalid=1;
-			continue;
-		}
-		continua=0;
-	}
-
-	*tot=num_slot;
-	free(line);
-	return mod;
 }
 
 int read_header(pheader *header, char *path, int *slot){
