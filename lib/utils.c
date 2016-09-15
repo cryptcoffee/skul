@@ -50,7 +50,8 @@ void print_help(){
 	printf("   -c PATH: use the configuration file located at PATH\n");
 	printf("   -n: start cracking immediately without waiting for the user to press enter\n");
 	printf("   -f y/n: enable (y) or disable (n) the fast check\n");
-	printf("   -l PATH: use the password list file located at PATH \n\n");
+	printf("   -l PATH: use the password list file located at PATH \n");
+	printf("   -o ORDER: in case of multiple password, use the order ORDER\n\n");
 	printf("MODE\n");
 	printf("   1: Bruteforce\n");
 	printf("   2: Password list\n");
@@ -65,6 +66,8 @@ void print_help(){
 	printf("      # chown myusr:myusr ./my_dump\n");
 	printf("   Then you can run:\n");
 	printf("      $ skul ./my_dump\n\n");
+	printf("ORDER\n");
+	printf("   The order to use in case of multiple passwords.\n   Must be in the format: 0,1,2\n\n");
 	printf("Configuring Skul:\n");
 	printf("   You can configure Skul through it's configuration file `conf/skul.cfg`\n\n");
 	printf("** For BlackArch Linux users:\n");
