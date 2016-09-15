@@ -38,6 +38,7 @@
 #include "../lib/thread.h"
 #include "../lib/attacks.h"
 #include "skul.h"
+#include "../lib/luks/decrypt.h"
 #include <stdint.h>
 #include <inttypes.h>
 #include <math.h>
@@ -233,13 +234,8 @@ int main(int argc, char **argv){
 	 *
 	 *
 	 * */
-
-	/* set prepare function */
-	ctx.init = LUKS_init;
-
-	/* calling the prepare function */
-	if(!ctx.init(&ctx)){
-		errprint("[FATAL] error initializing context\n");
+	if(!SKUL_CTX_init_target(&ctx, LUKS)){
+		errprint("Error initializing LUKS\n");
 		exit(EXIT_FAILURE);
 	}
 
@@ -250,7 +246,6 @@ int main(int argc, char **argv){
 		print_keyslot(&ctx.luks->header,0);
 		printf("\n");
 	}
-
 
 
 	/* prepare OpenSSL */
@@ -368,7 +363,7 @@ int main(int argc, char **argv){
 	/* free memory */
 	EVP_cleanup();
 
-	ctx.clean_target_ctx(&ctx);
+	ctx.clean_target_ctx(ctx.luks);
 	if(ctx.attack_mode==1 || ctx.attack_mode==3){
 		free(set);
 	}
@@ -380,11 +375,10 @@ int main(int argc, char **argv){
 }
 
 void SKUL_CTX_init(SKUL_CTX *ctx){
-	
+
 	ctx->attack_mode=UNSET;
 	ctx->fast = UNSET;
 	ctx->pwlist_path = NULL;
-	ctx->target = LUKS; // default
 	ctx->path = NULL;
 	
 	// default.. for you ax :*
@@ -395,10 +389,40 @@ void SKUL_CTX_init(SKUL_CTX *ctx){
 
 }
 
+int SKUL_CTX_init_target(SKUL_CTX *ctx, int target){
+	
+	switch(target){
+		case LUKS:
+			ctx->target = LUKS;
+			ctx->init_target_ctx = LUKS_init;
+			ctx->cpy_target_ctx = LUKS_CTXcpy;
+			ctx->open_key = luks_open_key;
+			ctx->clean_target_ctx = LUKS_clean;
+
+			if(!(ctx->luks = calloc(1,sizeof(LUKS_CTX)))){
+				errprint("calloc error\n");
+				return 0;
+			}
+
+			if(!ctx->init_target_ctx(ctx->luks, ctx->pwd_default, &(ctx->num_pwds), 
+					ctx->pwd_ord, ctx->path, ctx->UP, &(ctx->attack_mode))){
+				errprint("Error initializing LUKS context\n");
+				return 0;
+			}
+		break;
+
+		//other cases...
+
+	}
+
+	return 1;
+
+}
+
 int SKUL_CTX_cpy(SKUL_CTX *dst, SKUL_CTX *src){
 
 	dst->target = src->target;
-	dst->init = src->init;
+	dst->init_target_ctx = src->init_target_ctx;
 	dst->clean_target_ctx = src->clean_target_ctx;
 	dst->cpy_target_ctx = src->cpy_target_ctx;
 	dst->open_key = src->open_key;
@@ -432,7 +456,12 @@ int SKUL_CTX_cpy(SKUL_CTX *dst, SKUL_CTX *src){
 		memcpy(dst->path, src->path, strlen(src->path)*sizeof(char));
 	}
 
-	src->cpy_target_ctx(dst, src);
+	if(!(dst->luks = calloc(1,sizeof(LUKS_CTX)))){
+		errprint("calloc error\n");
+		return 0;
+	}
+
+	src->cpy_target_ctx(dst->luks, src->luks);
 
 	return 1;
 }

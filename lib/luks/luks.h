@@ -54,9 +54,11 @@ typedef struct luks_ctx{
 
 }LUKS_CTX;
 
-int alloc_header(pheader *header);
-void freeheader(pheader *header);
 void print_header(pheader *header);
 void print_keyslot(pheader *header,int slot);
+int LUKS_init(LUKS_CTX *ctx, int pwd_default, int *num_pwds, int *pwd_ord, char *path,
+		usrp UP, int *attack_mode);
+int LUKS_CTXcpy(LUKS_CTX *dest, LUKS_CTX *surc);
+void LUKS_clean(LUKS_CTX *ctx);
 
 #endif

@@ -13,10 +13,9 @@
 #define SKUL_MINOR 3
 #define SKUL_FIX 0
 
-/* debug and warnings
- * #define DEBUG 
- * #define WARN 
- * */
+/* debug and warnings */
+#define DEBUG 0
+// #define WARN 
 #define LOG 0
 
 typedef enum {
@@ -27,7 +26,7 @@ typedef enum {
 typedef struct skul_ctx{
 	
 	target_t target;
-	int (*init)();
+	int (*init_target_ctx)();
 	void (*clean_target_ctx)();
 	int (*cpy_target_ctx)();
 	int (*open_key)();
@@ -49,13 +48,8 @@ typedef struct skul_ctx{
 }SKUL_CTX;
 
 void SKUL_CTX_init(SKUL_CTX *ctx);
+int SKUL_CTX_init_target(SKUL_CTX *ctx, int target);
 int SKUL_CTX_cpy(SKUL_CTX *dst, SKUL_CTX *src);
-
-
-/* Functions for LUKS */
-int LUKS_init(SKUL_CTX *ctx);
-void LUKS_clean(SKUL_CTX *ctx);
-int LUKS_CTXcpy(SKUL_CTX *dest, SKUL_CTX *surc);
 
 
 #endif

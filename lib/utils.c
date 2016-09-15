@@ -128,30 +128,18 @@ int errprint(const char *format, ...){
 	return done;
 }
 
-int dbgprint(int debug, const char *format, ...){
-
-	va_list arg;
-	int done;
-	
-	if(debug){
-		va_start(arg, format);
-		done = vfprintf(stdout,format,arg);
-		va_end(arg);
-		return done;
-	}
-
-	return 0;
-}
 
 int debug_print(const char *format, ...){
 
-#ifdef DEBUG
+#if DEBUG == 1
 	va_list arg;
 	int done;
 	
+	printf(" [dbg] ");
 		va_start(arg, format);
 		done = vfprintf(stdout,format,arg);
 		va_end(arg);
+		fflush(stdout);
 		return done;
 #endif
 

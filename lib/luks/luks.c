@@ -6,177 +6,10 @@
 #include "../../src/skul.h"
 #include "luks.h"
 
-#define DEBUG 0 
-
 int interface_selection(pheader *header,int *slot,int *slot_order, int *tot, 
 		int key_sel);
 int initfs(pheader *header, int *iv_mode, int *chain_mode, char *crypt_disk, 
 		char *path, lkey_t *encrypted, int *slot);
-
-
-int LUKS_pheadercpy(pheader *dst, pheader *src){
-
-	int i;
-
-	dst->version = src->version;
-	dst->payload_offset = src->payload_offset;
-	dst->key_bytes = src->key_bytes;
-	dst->mk_digest_iter = src->mk_digest_iter;
-
-	memcpy(&(dst->magic), &(src->magic),  6*sizeof(unsigned char));
-	memcpy(&(dst->cipher_name), &(src->cipher_name), 32*sizeof(unsigned char));
-	memcpy(&(dst->cipher_mode), &(src->cipher_mode), 32*sizeof(unsigned char));
-	memcpy(&(dst->hash_spec), &(src->hash_spec), 32*sizeof(unsigned char));
-	memcpy(&(dst->mk_digest), &(src->mk_digest), LUKS_DIGESTSIZE*sizeof(unsigned char));
-	memcpy(&(dst->mk_digest_salt), &(src->mk_digest_salt), LUKS_SALTSIZE*sizeof(unsigned char));
-	memcpy(&(dst->uuid), &(src->uuid), 40*sizeof(unsigned char));
-
-	/* key-slots */
-	for(i=0; i<LUKS_NUMKEYS; i++){
-		dst->keyslot[i].active = src->keyslot[i].active;
-		dst->keyslot[i].iterations = src->keyslot[i].iterations;
-		dst->keyslot[i].key_material_offset = src->keyslot[i].key_material_offset;
-		dst->keyslot[i].stripes = src->keyslot[i].stripes;
-		memcpy(&(dst->keyslot[i].salt), &(src->keyslot[i].salt), LUKS_SALTSIZE);
-	}
-
-	return 1;
-
-}
-
-
-int LUKS_init(SKUL_CTX *ctx){
-
-	int c,mod,i;
-
-	ctx->target = LUKS;
-	ctx->cpy_target_ctx = LUKS_CTXcpy;
-	ctx->open_key = luks_open_key;
-	ctx->clean_target_ctx = LUKS_clean;
-
-	if(!(ctx->luks = calloc(1,sizeof(LUKS_CTX)))){
-		errprint("calloc error\n");
-		return 0;
-	}
-
-	if(!(ctx->luks->crypt_disk=calloc(32,sizeof(char)))){
-		errprint("calloc error!\n");
-		return 0;
-	}
-	/* Need refactor. Should pass only the SKUL_CTX */
-	if(!initfs(&(ctx->luks->header), &(ctx->luks->iv_mode), &(ctx->luks->chain_mode), 
-				ctx->luks->crypt_disk, ctx->path, &(ctx->luks->encrypted), ctx->luks->slot)){
-		return 0;
-	}
-
-	if(ctx->pwd_default){
-		/* Default */
-		ctx->pwd_ord = realloc(ctx->pwd_ord,8);
-		for(i=0,c=0;i<8;i++){
-			if(ctx->luks->slot[i]){
-				ctx->pwd_ord[c]=i;
-				c++;
-			}
-		}
-	}else{
-		for(i=0,c=0; i<ctx->num_pwds && i<8; i++){
-			if(ctx->luks->slot[ctx->pwd_ord[i]]){
-				if(ctx->pwd_ord[i]>8 || ctx->pwd_ord[i]<0){
-					errprint("Invalid keyslot.\nTry 'skul -h' for more information\n");
-					return 0;
-				}else{
-					c++;
-				}
-			}else{
-				errprint("Keyslot %d not enabled\n", ctx->pwd_ord[i]);
-				return 0;
-			}
-		}
-	}
-	ctx->num_pwds=c;
-	if(ctx->num_pwds==0){
-		errprint("Cannot found any active keyslot.\nTry not specifying any keyslot with the -o option.\n");
-		return 0;
-	}
-
-	mod = ctx->UP.SEL_MOD;
-	if(mod>3 || mod<0){
-		errprint("Invalid Attack mode selection.\nTry 'skul -h' for more information\n");
-		return 0;
-	}
-
-	ctx->attack_mode=mod;
-
-	/* set the correct pbk_hash */
-	if(strcmp(ctx->luks->header.hash_spec, "sha1")==0){
-		ctx->luks->pbk_hash=SHA_ONE;
-	}else if(strcmp(ctx->luks->header.hash_spec, "sha256")==0){
-		ctx->luks->pbk_hash=SHA_TWO_FIVE_SIX;
-	}else if(strcmp(ctx->luks->header.hash_spec, "sha512")==0){
-		ctx->luks->pbk_hash=SHA_FIVE_ONE_TWO;
-	}else if(strcmp(ctx->luks->header.hash_spec, "ripemd160")==0){
-		ctx->luks->pbk_hash=RIPEMD;
-	}else{
-		errprint("Unsupported hash function\n");
-		return 0;
-	}
-
-	return 1;
-
-}
-
-void LUKS_clean(SKUL_CTX *ctx){
-	
-	freeheader(&(ctx->luks->header));
-	free(ctx->luks->encrypted.key);
-	free(ctx->luks->crypt_disk);
-	free(ctx->luks);
-
-}
-
-int LUKS_CTXcpy(SKUL_CTX *dst, SKUL_CTX *src){
-
-	int i;
-
-	if(!(dst->luks = calloc(1,sizeof(LUKS_CTX)))){
-		errprint("calloc error\n");
-		return 0;
-	}
-
-	dst->luks->encrypted.keylen = src->luks->encrypted.keylen;
-	
-	dst->luks->iv_mode = src->luks->iv_mode;
-	dst->luks->chain_mode = src->luks->chain_mode;
-	dst->luks->pbk_hash = src->luks->pbk_hash;
-
-	for(i=0;i<8;i++){
-		dst->luks->slot[i] = src->luks->slot[i];
-	}
-
-	if(!alloc_header(&(dst->luks->header))){
-		errprint("alloc_header error!\n");
-		return 0;
-	}
-
-	if((dst->luks->encrypted.key=calloc(src->luks->encrypted.keylen, sizeof(char)))==NULL){
-		errprint("malloc error!\n");
-		return 0;
-	}
-	if((dst->luks->crypt_disk = calloc(32,sizeof(char)))==NULL){
-		errprint("malloc error\n");
-		return 0;
-	}
-
-
-	LUKS_pheadercpy(&(dst->luks->header), &(src->luks->header));
-
-	memcpy(dst->luks->encrypted.key, src->luks->encrypted.key, src->luks->encrypted.keylen);
-
-	memcpy(dst->luks->crypt_disk, src->luks->crypt_disk, 32);
-
-	return 1;
-
-}
 
 int alloc_header(pheader *header){
 	
@@ -221,39 +54,187 @@ int alloc_header(pheader *header){
 	return 1;
 }
 
+
 void freeheader(pheader *header){
 	int i;
 
-	if(DEBUG){
-		fprintf(stderr,"freeheader started\n");
-	}
+	debug_print("freeheader started\n");
 	free((header->magic));
-	if(DEBUG)
-		fprintf(stderr,"	->magic deallocated\n");
+	debug_print("	->magic deallocated\n");
 	free((header->cipher_name));
-	if(DEBUG)
-		fprintf(stderr,"	->cipher_name deallocated\n");
+	debug_print("	->cipher_name deallocated\n");
 	free(header->cipher_mode);
-	if(DEBUG)
-		fprintf(stderr,"	->cipher_mode deallocated\n");
+	debug_print("	->cipher_mode deallocated\n");
 	free(header->hash_spec);
-	if(DEBUG)
-		fprintf(stderr,"	->hash_spec deallocated\n");
+	debug_print("	->hash_spec deallocated\n");
 	free(header->mk_digest);
-	if(DEBUG)
-		fprintf(stderr,"	->mk_digest deallocated\n");
+	debug_print("	->mk_digest deallocated\n");
 	free(header->mk_digest_salt);
-	if(DEBUG)
-		fprintf(stderr,"	->mk_digest_salt deallocated\n");
+	debug_print("	->mk_digest_salt deallocated\n");
 	free(header->uuid);
-	if(DEBUG)
-		fprintf(stderr,"	->uuid deallocated\n");
+	debug_print("	->uuid deallocated\n");
 	for(i=0;i<LUKS_NUMKEYS;i++){
 		free(header->keyslot[i].salt);
-		if(DEBUG)
-			fprintf(stderr,"	->keyslot[%d]: salt deallocated\n",i);
+		debug_print("	->keyslot[%d]: salt deallocated\n",i);
 	}
 	
+}
+
+
+
+int LUKS_pheadercpy(pheader *dst, pheader *src){
+
+	int i;
+
+	dst->version = src->version;
+	dst->payload_offset = src->payload_offset;
+	dst->key_bytes = src->key_bytes;
+	dst->mk_digest_iter = src->mk_digest_iter;
+
+	memcpy(dst->magic, src->magic,  6*sizeof(unsigned char));
+	memcpy(dst->cipher_name, src->cipher_name, 32*sizeof(unsigned char));
+	memcpy(dst->cipher_mode, src->cipher_mode, 32*sizeof(unsigned char));
+	memcpy(dst->hash_spec, src->hash_spec, 32*sizeof(unsigned char));
+	memcpy(dst->mk_digest, src->mk_digest, LUKS_DIGESTSIZE*sizeof(unsigned char));
+	memcpy(dst->mk_digest_salt, src->mk_digest_salt, LUKS_SALTSIZE*sizeof(unsigned char));
+	memcpy(dst->uuid, src->uuid, 40*sizeof(unsigned char));
+
+	/* key-slots */
+	for(i=0; i<LUKS_NUMKEYS; i++){
+		dst->keyslot[i].active = src->keyslot[i].active;
+		dst->keyslot[i].iterations = src->keyslot[i].iterations;
+		dst->keyslot[i].key_material_offset = src->keyslot[i].key_material_offset;
+		dst->keyslot[i].stripes = src->keyslot[i].stripes;
+		memcpy(dst->keyslot[i].salt, src->keyslot[i].salt, LUKS_SALTSIZE);
+	}
+
+	return 1;
+
+}
+
+
+int LUKS_init(LUKS_CTX *ctx, int pwd_default, int *num_pwds, int *pwd_ord, char *path, 
+		usrp UP, int *attack_mode){
+
+	int c,mod,i;
+
+	ctx->encrypted.keylen = 32;
+	if((ctx->encrypted.key=calloc(ctx->encrypted.keylen, sizeof(char)))==NULL){
+		errprint("malloc error!\n");
+		return 0;
+	}
+	if((ctx->crypt_disk = calloc(32,sizeof(char)))==NULL){
+		errprint("malloc error\n");
+		return 0;
+	}
+
+
+	if(!initfs(&(ctx->header), &(ctx->iv_mode), &(ctx->chain_mode), 
+				ctx->crypt_disk, path, &(ctx->encrypted), ctx->slot)){
+		return 0;
+	}
+
+	if(pwd_default){
+		/* Default */
+		pwd_ord = realloc(pwd_ord,8);
+		for(i=0,c=0;i<8;i++){
+			if(ctx->slot[i]){
+				pwd_ord[c]=i;
+				c++;
+			}
+		}
+	}else{
+		for(i=0,c=0; i<*num_pwds && i<8; i++){
+			if(ctx->slot[pwd_ord[i]]){
+				if(pwd_ord[i]>8 || pwd_ord[i]<0){
+					errprint("Invalid keyslot.\nTry 'skul -h' for more information\n");
+					return 0;
+				}else{
+					c++;
+				}
+			}else{
+				errprint("Keyslot %d not enabled\n", pwd_ord[i]);
+				return 0;
+			}
+		}
+	}
+
+	*num_pwds=c;
+	if(*num_pwds==0){
+		errprint("Cannot found any active keyslot.\nTry not specifying any keyslot with the -o option.\n");
+		return 0;
+	}
+
+	mod = UP.SEL_MOD;
+	if(mod>3 || mod<0){
+		errprint("Invalid Attack mode selection.\nTry 'skul -h' for more information\n");
+		return 0;
+	}
+
+	*attack_mode=mod;
+
+	/* set the correct pbk_hash */
+	if(strcmp(ctx->header.hash_spec, "sha1")==0){
+		ctx->pbk_hash=SHA_ONE;
+	}else if(strcmp(ctx->header.hash_spec, "sha256")==0){
+		ctx->pbk_hash=SHA_TWO_FIVE_SIX;
+	}else if(strcmp(ctx->header.hash_spec, "sha512")==0){
+		ctx->pbk_hash=SHA_FIVE_ONE_TWO;
+	}else if(strcmp(ctx->header.hash_spec, "ripemd160")==0){
+		ctx->pbk_hash=RIPEMD;
+	}else{
+		errprint("Unsupported hash function\n");
+		return 0;
+	}
+
+	return 1;
+
+}
+
+void LUKS_clean(LUKS_CTX *ctx){
+	
+	freeheader(&(ctx->header));
+	free(ctx->encrypted.key);
+	free(ctx->crypt_disk);
+	free(ctx);
+
+}
+
+int LUKS_CTXcpy(LUKS_CTX *dst, LUKS_CTX *src){
+
+	int i;
+
+	dst->encrypted.keylen = src->encrypted.keylen;
+	
+	dst->iv_mode = src->iv_mode;
+	dst->chain_mode = src->chain_mode;
+	dst->pbk_hash = src->pbk_hash;
+
+	for(i=0;i<8;i++){
+		dst->slot[i] = src->slot[i];
+	}
+
+	if(!alloc_header(&(dst->header))){
+		errprint("alloc_header error!\n");
+		return 0;
+	}
+
+	if((dst->encrypted.key=calloc(src->encrypted.keylen, sizeof(char)))==NULL){
+		errprint("malloc error!\n");
+		return 0;
+	}
+	if((dst->crypt_disk = calloc(32,sizeof(char)))==NULL){
+		errprint("malloc error\n");
+		return 0;
+	}
+
+
+	LUKS_pheadercpy(&(dst->header), &(src->header));
+	memcpy(dst->encrypted.key, src->encrypted.key, src->encrypted.keylen);
+	memcpy(dst->crypt_disk, src->crypt_disk, 32);
+
+	return 1;
+
 }
 
 int read_header(pheader *header, char *path, int *slot){
@@ -430,28 +411,34 @@ int initfs(pheader *header, int *iv_mode, int *chain_mode, char *crypt_disk,
 		errprint("error in header allocation!\n");
 		exit(EXIT_FAILURE);
 	}
+	debug_print("luks header allocated\n");
 
 	/* read the header */
 	if(!(read_header(header,path, slot))){
 		errprint("error reading header\n");
 		exit(EXIT_FAILURE);
 	}
+	debug_print("read header done\n");
+
 	if(memcmp(header->magic, LUKS_MAGIC, 6) != 0){
 		errprint("Not a LUKS disk!\n");
 		exit(EXIT_FAILURE);
 	}
+	debug_print("LUKS MAGIC ok\n");
 	
 	/* check cipher mode */
 	if(!check_mode(header->cipher_mode, iv_mode, chain_mode)){
 		errprint("unsupported cipher_mode!\n");
 		exit(EXIT_FAILURE);
 	}
+	debug_print("cipher mode ok\n");
 
 	/* just read a little piece of disk */
 	if(!(read_disk(crypt_disk, 32, path, header->payload_offset*SECTOR_SIZE))){
 		errprint("error reading disk\n");
 		exit(EXIT_FAILURE);
 	}
+	debug_print("read encrypted disk done\n");
 	
 	/* Read the encrypted MasterKey from partition 
 	 * encryptedKey ← read from partition at
@@ -467,6 +454,7 @@ int initfs(pheader *header, int *iv_mode, int *chain_mode, char *crypt_disk,
 		errprint("error reading encryptedKey\n");
 		exit(EXIT_FAILURE);
 	}
+	debug_print("read encrypted master key done\n");
 
 	return 1;
 }

@@ -35,7 +35,6 @@
 #include<string.h>
 #include <signal.h>
 
-#define DEBUG 0
 pthread_cond_t condition_cond = PTHREAD_COND_INITIALIZER;
 pthread_mutex_t condition_mutex = PTHREAD_MUTEX_INITIALIZER;
 
@@ -85,12 +84,11 @@ int thforce_datainit(thforce_data *arg, SKUL_CTX *ctx, int id, int start, int nu
 	arg->set_len=set_len;
 	arg->progress=progress;
 	arg->win_pwd=win_pwd;
+
 	if(!SKUL_CTX_cpy(&(arg->ctx), ctx)){
 		errprint("Error in SKUL CTX copy\n");
 		return 0;
 	}
-/*	printf("Here!\n");
-	fflush(stdout);*/
 
 	/* create a copy of the set for the current thread */
 	if((arg->set = calloc(set_len,sizeof(char *)))==NULL){
