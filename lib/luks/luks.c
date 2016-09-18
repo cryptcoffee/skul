@@ -16,38 +16,38 @@ int alloc_header(pheader *header){
 	int i;
 	
 	if(!(header->magic = calloc(7,sizeof(char)))){
-		fprintf(stderr,"malloc error\n");
+		errprint("malloc error\n");
 		return 0;
 	}
 	if(!(header->cipher_name = calloc(33,sizeof(char)))){
-		fprintf(stderr,"malloc error\n");
+		errprint("malloc error\n");
 		return 0;
 	}
 	if(!(header->cipher_mode = calloc(33,sizeof(char)))){
-		fprintf(stderr,"malloc error\n");
+		errprint("malloc error\n");
 		return 0;
 	}
 	if(!(header->hash_spec = calloc(33,sizeof(char)))){
-		fprintf(stderr,"malloc error\n");
+		errprint("malloc error\n");
 		return 0;
 	}
 	if(!(header->mk_digest = calloc(LUKS_DIGESTSIZE,sizeof(char)))){
-		fprintf(stderr,"malloc error\n");
+		errprint("malloc error\n");
 		return 0;
 	}
 	if(!(header->mk_digest_salt = calloc(LUKS_SALTSIZE,sizeof(char)))){
-		fprintf(stderr,"malloc error\n");
+		errprint("malloc error\n");
 		return 0;
 	}
 	if(!(header->uuid = calloc(41,sizeof(char)))){
-		fprintf(stderr,"malloc error\n");
+		errprint("malloc error\n");
 		return 0;
 	}
 
 	/* keyslot field allocation */
 	for(i=0;i<LUKS_NUMKEYS;i++){
 		if(!(header->keyslot[i].salt = calloc(LUKS_SALTSIZE+1,sizeof(char)))){
-			fprintf(stderr,"malloc error\n");
+			errprint("malloc error\n");
 			return 0;
 		}
 	}

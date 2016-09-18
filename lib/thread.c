@@ -62,7 +62,7 @@ int thlist_datainit(thlist_data *arg, SKUL_CTX *ctx, int id, char **list, int nu
 
 	for(i=0;i<num;i++){
 		l=strlen(list[i]);
-		if((arg->list[i]=calloc(l,sizeof(char)))==NULL){
+		if((arg->list[i]=calloc(l+1,sizeof(char)))==NULL){
 			errprint("malloc error!\n");
 			return 0;
 		}
