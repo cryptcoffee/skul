@@ -80,8 +80,6 @@ void freeheader(pheader *header){
 	
 }
 
-
-
 int LUKS_pheadercpy(pheader *dst, pheader *src){
 
 	int i;
@@ -376,6 +374,20 @@ void print_keyslot(pheader *header,int slot){
 	}
 	
 }
+
+void LUKS_print_header(LUKS_CTX *ctx){
+	int i;
+
+	print_header(&(ctx->header));
+	for(i=0;i<8;i++){
+		if(ctx->slot[i]){
+			printf("\n");
+			print_keyslot(&(ctx->header),0);
+		}
+	}
+}
+
+
 
 int read_disk(unsigned char *dst, size_t size, char *path, size_t offset){
 	

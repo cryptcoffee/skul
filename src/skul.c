@@ -239,11 +239,8 @@ int main(int argc, char **argv){
 		exit(EXIT_FAILURE);
 	}
 
-	/*TODO: print should be generic... */
 	if(ctx.UP.SEL_MOD!=0){
-		print_header(&ctx.luks->header);
-		printf("\nATTACKING KEYSLOTS:\n\n");
-		print_keyslot(&ctx.luks->header,0);
+		ctx.print_header(ctx.luks);
 		printf("\n");
 	}
 
@@ -398,6 +395,7 @@ int SKUL_CTX_init_target(SKUL_CTX *ctx, int target){
 			ctx->cpy_target_ctx = LUKS_CTXcpy;
 			ctx->open_key = luks_open_key;
 			ctx->clean_target_ctx = LUKS_clean;
+			ctx->print_header = LUKS_print_header;
 
 			if(!(ctx->luks = calloc(1,sizeof(LUKS_CTX)))){
 				errprint("calloc error\n");

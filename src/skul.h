@@ -30,6 +30,7 @@ typedef struct skul_ctx{
 	void (*clean_target_ctx)();
 	int (*cpy_target_ctx)();
 	int (*open_key)();
+	void (*print_header)();
 	usrp UP;
 	int attack_mode;
 	char *pwlist_path;

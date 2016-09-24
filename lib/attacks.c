@@ -365,7 +365,7 @@ int pwlist(SKUL_CTX *ctx){
 	}
 	free(list);
 
-	/*TODO: make independent from luks*/
+	/* TODO: make independent from luks*/
 	if(!control(max_l,count, threads, ctx->UP.NUM_THR, &(ctx->luks->header), progress, win_pwd,
 				ctx->cur_pwd, ctx->UP.PRG_BAR)){
 		printf("Password not found\n");
