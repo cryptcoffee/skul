@@ -240,7 +240,7 @@ int main(int argc, char **argv){
 	}
 
 	if(ctx.UP.SEL_MOD!=0){
-		ctx.print_header(ctx.luks);
+		ctx.print_header(ctx.tctx);
 		printf("\n");
 	}
 
@@ -360,7 +360,7 @@ int main(int argc, char **argv){
 	/* free memory */
 	EVP_cleanup();
 
-	ctx.clean_target_ctx(ctx.luks);
+	ctx.clean_target_ctx(ctx.tctx);
 	if(ctx.attack_mode==1 || ctx.attack_mode==3){
 		free(set);
 	}
@@ -397,12 +397,12 @@ int SKUL_CTX_init_target(SKUL_CTX *ctx, int target){
 			ctx->clean_target_ctx = LUKS_clean;
 			ctx->print_header = LUKS_print_header;
 
-			if(!(ctx->luks = calloc(1,sizeof(LUKS_CTX)))){
+			if(!(ctx->tctx.luks = calloc(1,sizeof(LUKS_CTX)))){
 				errprint("calloc error\n");
 				return 0;
 			}
 
-			if(!ctx->init_target_ctx(ctx->luks, ctx->pwd_default, &(ctx->num_pwds), 
+			if(!ctx->init_target_ctx(ctx->tctx, ctx->pwd_default, &(ctx->num_pwds), 
 					ctx->pwd_ord, ctx->path, ctx->UP, &(ctx->attack_mode))){
 				errprint("Error initializing LUKS context\n");
 				return 0;
@@ -454,12 +454,12 @@ int SKUL_CTX_cpy(SKUL_CTX *dst, SKUL_CTX *src){
 		memcpy(dst->path, src->path, strlen(src->path)*sizeof(char));
 	}
 
-	if(!(dst->luks = calloc(1,sizeof(LUKS_CTX)))){
+	if(!(dst->tctx.luks = (LUKS_CTX *) calloc(1,sizeof(LUKS_CTX)))){
 		errprint("calloc error\n");
 		return 0;
 	}
 
-	src->cpy_target_ctx(dst->luks, src->luks);
+	src->cpy_target_ctx(dst->tctx, src->tctx);
 
 	return 1;
 }

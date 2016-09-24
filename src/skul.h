@@ -43,8 +43,10 @@ typedef struct skul_ctx{
 	int cur_pwd;
 	int *pwd_ord;
 
-	LUKS_CTX *luks;
-	/* other contexts goes here */
+	union t{
+		LUKS_CTX *luks;
+		/* other target contexts goes here */
+	}tctx;
 
 }SKUL_CTX;
 

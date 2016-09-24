@@ -329,12 +329,12 @@ int luks_open_key(char *key, int keylen, SKUL_CTX *ctx){
 	lkey_t master, split, usrKey, usrKeyhashed;
 	pheader *header;
 
-	header = &(ctx->luks->header);
+	header = &(ctx->tctx.luks->header);
 
 	master.key = calloc(header->key_bytes+1, sizeof(char));
 	master.keylen = header->key_bytes;
-	split.key = calloc(ctx->luks->encrypted.keylen, sizeof(char));
-	split.keylen = ctx->luks->encrypted.keylen;
+	split.key = calloc(ctx->tctx.luks->encrypted.keylen, sizeof(char));
+	split.keylen = ctx->tctx.luks->encrypted.keylen;
 	usrKey.key = key;
 	usrKey.keylen = keylen;
 	buff = calloc(AES_BLOCK_SIZE,sizeof(char));
@@ -344,7 +344,7 @@ int luks_open_key(char *key, int keylen, SKUL_CTX *ctx){
 	usrKeyhashed.key = calloc(header->key_bytes,sizeof(char));
 	usrKeyhashed.keylen = header->key_bytes;
 
-	switch(ctx->luks->pbk_hash){
+	switch(ctx->tctx.luks->pbk_hash){
 		case SHA_ONE:
 			fastpbkdf2_hmac_sha1(
 				usrKey.key, 
@@ -391,7 +391,7 @@ int luks_open_key(char *key, int keylen, SKUL_CTX *ctx){
 	}
 
 	/* 2) generate iv_salt if needed for key decryption */
-	if(ctx->luks->iv_mode == ESSIV){ 
+	if(ctx->tctx.luks->iv_mode == ESSIV){ 
 	
 		if(!(iv = calloc(1,AES_BLOCK_SIZE))){
 			warn_print("[WARNING] calloc error\n");
@@ -411,7 +411,7 @@ int luks_open_key(char *key, int keylen, SKUL_CTX *ctx){
 			goto end;
 		}
 	
-	}else if(ctx->luks->chain_mode == XTS){
+	}else if(ctx->tctx.luks->chain_mode == XTS){
 		if(!(iv = calloc(2,AES_BLOCK_SIZE))){
 			warn_print("[WARNING] calloc error\n");
 			r=0;
@@ -419,7 +419,7 @@ int luks_open_key(char *key, int keylen, SKUL_CTX *ctx){
 		}
 	}
 
-	AFSectors = (int)(ceil((float)(ctx->luks->encrypted.keylen) / SECTOR_SIZE));
+	AFSectors = (int)(ceil((float)(ctx->tctx.luks->encrypted.keylen) / SECTOR_SIZE));
 
 	/* iv generation for each sector */
 	for(sector=0; sector<AFSectors; sector++){
@@ -431,9 +431,9 @@ int luks_open_key(char *key, int keylen, SKUL_CTX *ctx){
 		buff[2] = (sec >> 8) & 0xff;
 		buff[3] = (sec ) & 0xff;
 
-		switch(ctx->luks->chain_mode){
+		switch(ctx->tctx.luks->chain_mode){
 			case CBC:
-				switch(ctx->luks->iv_mode){
+				switch(ctx->tctx.luks->iv_mode){
 					case ESSIV:
 					if(!gen_essiv(iv_salt, iv, &j, buff, AES_BLOCK_SIZE)){
 							warn_print("[WARNING] gen_essiv error\n");
@@ -461,8 +461,8 @@ int luks_open_key(char *key, int keylen, SKUL_CTX *ctx){
 		}
 
 		/* 3) sector by sector decryption of masterkey */	
-		if(!decrypt(ctx->luks->chain_mode,usrKeyhashed.key, 
-					ctx->luks->encrypted.key+(sector*SECTOR_SIZE),
+		if(!decrypt(ctx->tctx.luks->chain_mode,usrKeyhashed.key, 
+					ctx->tctx.luks->encrypted.key+(sector*SECTOR_SIZE),
 					SECTOR_SIZE,&outl,
 					split.key+(sector*SECTOR_SIZE),iv)){
 			warn_print("[WARNING] decrypt error\n");
@@ -489,11 +489,11 @@ int luks_open_key(char *key, int keylen, SKUL_CTX *ctx){
 
 	/* 5) Test master key */
 	if(ctx->fast){
-		r=testkeydecryption(ctx->luks->chain_mode, master.key, ctx->luks->crypt_disk, 
+		r=testkeydecryption(ctx->tctx.luks->chain_mode, master.key, ctx->tctx.luks->crypt_disk, 
 				header->key_bytes);
 	}else{
 		r=testkeyhash(master.key, master.keylen, header->mk_digest_salt,
-				header->mk_digest_iter, header->mk_digest,header->hash_spec, ctx->luks->pbk_hash);
+				header->mk_digest_iter, header->mk_digest,header->hash_spec, ctx->tctx.luks->pbk_hash);
 	}
 
 end:
@@ -502,9 +502,9 @@ end:
 	free(master.key);
 	free(split.key);
 	free(buff);
-	switch(ctx->luks->chain_mode){
+	switch(ctx->tctx.luks->chain_mode){
 		case CBC:
-			if(ctx->luks->iv_mode==ESSIV){
+			if(ctx->tctx.luks->iv_mode==ESSIV){
 				free(iv);
 				free(iv_salt);
 			}
