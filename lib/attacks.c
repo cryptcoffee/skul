@@ -128,7 +128,7 @@ int bruteforce(int len, char *set, int set_len, SKUL_CTX *ctx){
 	pthread_attr_t attr;
 	char *win_pwd;
 	void *(*force)(void *);
-	int (*control)(int,int,pthread_t *,int, pheader *, int *, char *, int,int);
+	int (*control)(int,int,pthread_t *,int, int *, char *, int,int);
 	unsigned long sec;
 	struct timeval t0,t1;
 
@@ -206,8 +206,7 @@ int bruteforce(int len, char *set, int set_len, SKUL_CTX *ctx){
 		}
 	}
 
-	/* TODO: make independent from LUKS */
-	if(!control(len, tot_comb, threads, ctx->UP.NUM_THR, &(ctx->tctx.luks->header), progress, win_pwd, 
+	if(!control(len, tot_comb, threads, ctx->UP.NUM_THR, progress, win_pwd, 
 				ctx->cur_pwd, ctx->UP.PRG_BAR)){
 		printf("Password not found\n");
 		found = 0;
@@ -254,7 +253,7 @@ int pwlist(SKUL_CTX *ctx){
 	pthread_t *threads;
 	pthread_attr_t attr;
 	void *(*lst)(void *);
-	int (*control)(int,int,pthread_t *,int, pheader *, int *, char *, int, int);
+	int (*control)(int,int,pthread_t *,int, int *, char *, int, int);
 	unsigned long sec=0;
 	struct timeval t0,t1;
 
@@ -311,12 +310,6 @@ int pwlist(SKUL_CTX *ctx){
 	pthread_attr_init(&attr);
 	pthread_attr_setdetachstate(&attr,PTHREAD_CREATE_JOINABLE);
 
-//	int *addr = calloc(80000,sizeof(char));
-//	printf("%016x\n", &addr);
-//	printf("-----------\n");
-//	fflush(stdout);
-
-
 	/* arguments initialization */
 	jforth = count/ctx->UP.NUM_THR;
 	for(j=0;j<ctx->UP.NUM_THR-1;j++){
@@ -365,8 +358,7 @@ int pwlist(SKUL_CTX *ctx){
 	}
 	free(list);
 
-	/* TODO: make independent from luks*/
-	if(!control(max_l,count, threads, ctx->UP.NUM_THR, &(ctx->tctx.luks->header), progress, win_pwd,
+	if(!control(max_l,count, threads, ctx->UP.NUM_THR, progress, win_pwd,
 				ctx->cur_pwd, ctx->UP.PRG_BAR)){
 		printf("Password not found\n");
 		found = 0;

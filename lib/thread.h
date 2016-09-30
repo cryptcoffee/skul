@@ -66,10 +66,10 @@ int thforce_datainit(thforce_data *arg, SKUL_CTX *ctx, int id, int start, int nu
 		char *win_pwd);
 
 int th_control(int max_l, int count, pthread_t *threads, int num_th, 
-		pheader *header, int *progress, char *win_pwd, int keyslot, int prg_bar);
+		int *progress, char *win_pwd, int cur_pwd, int prg_bar);
 
 int test_control(int max_l, int count, pthread_t *threads, int num_th, 
-		pheader *header, int *progress, char *win_pwd, int keyslot, int prg_bar);
+		int *progress, char *win_pwd, int cur_pwd, int prg_bar);
 
 void *th_list(void *param);
 
