@@ -25,6 +25,7 @@
 
 
 #include "config.h"
+#include "../src/skul.h"
 #include "utils.h"
 #include <string.h>
 #include <unistd.h>
@@ -32,7 +33,7 @@
 #include <stdio.h>
 #include <errno.h>
 
-int read_cfg(usrp *UP, int threads, char *cfg_path, int mode, int fast){
+int read_cfg(usrp *UP, int threads, char *cfg_path, int mode, int fast, engine_t *engine){
 
 	FILE *conf;
 	char *line,par[10];
@@ -60,6 +61,7 @@ int read_cfg(usrp *UP, int threads, char *cfg_path, int mode, int fast){
 	UP->FST_CHK=1;
 	UP->KEY_SEL=0;
 	UP->SEL_MOD=3;
+	UP->ENG_SEL=0;
 
 	/* reading configuration file */
 	count = 0;
@@ -67,7 +69,7 @@ int read_cfg(usrp *UP, int threads, char *cfg_path, int mode, int fast){
 		count++;
 		if((line[0]!='#')&&(line[0]!='\0')&&(n<=10)){
 			if((i=sscanf(line,"%s %d",par, &val))<2){
-				fprintf(stderr,"skul: skul.cfg error: value not set on line %d\n",count);
+				errprint("skul.cfg error: value not set on line %d\n",count);
 				return 0;
 			}
 			par[7]='\0';
@@ -87,8 +89,10 @@ int read_cfg(usrp *UP, int threads, char *cfg_path, int mode, int fast){
 				UP->SEL_MOD=val;
 			}else if(memcmp(par,"PRG_BAR",7)==0){
 				UP->PRG_BAR=val;
+			}else if(memcmp(par,"ENG_SEL",7)==0){
+				UP->ENG_SEL=val;
 			}else{
-				fprintf(stderr,"skul: skul.cfg error: invalid line %d\n",count);
+				errprint("skul.cfg error: invalid line %d\n",count);
 				fclose(conf);
 				return 0;
 			}
@@ -106,6 +110,23 @@ int read_cfg(usrp *UP, int threads, char *cfg_path, int mode, int fast){
 	}
 	if(fast!=UNSET){
 		UP->FST_CHK=fast;
+	}
+
+	switch(UP->ENG_SEL){
+		case 0:
+			*engine = CPU;
+			break;
+
+		case 1:
+			*engine = CUDA;
+			break;
+
+		case 2:
+			*engine = CUDA_CPU;
+			break;
+
+		default:
+			errprint("skul.cfg error: invalid engine\n");
 	}
 	
 	fclose(conf);

@@ -23,11 +23,16 @@
  */
 
 
-
 #ifndef CONFIG_H
 #define CONFIG_H
 
 #define UNSET 99
+
+typedef enum{
+	CPU,
+	CUDA,
+	CUDA_CPU
+}engine_t;
 
 typedef struct usr_preferences{
 	int MIN_LEN;
@@ -38,8 +43,9 @@ typedef struct usr_preferences{
 	int KEY_SEL;
 	int SEL_MOD;
 	int PRG_BAR;
+	int ENG_SEL;
 }usrp;
 
-int read_cfg(usrp *UP, int threads, char *cfg_path, int mode, int fast);
+int read_cfg(usrp *UP, int threads, char *cfg_path, int mode, int fast, engine_t *engine);
 
 #endif

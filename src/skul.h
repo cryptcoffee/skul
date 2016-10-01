@@ -36,6 +36,8 @@ typedef struct skul_ctx{
 	char *pwlist_path;
 	char *path;					/* path of the encrypted target */
 	int fast;					/* maybe put it in the luks_ctx? */
+	engine_t engine;
+	int prompt;
 
 	/* multiple password management */
 	int pwd_default;
