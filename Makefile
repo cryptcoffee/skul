@@ -27,7 +27,6 @@ DBG = -g -Xlinker -Map=output.map
 # Compiling macros
 CC = gcc 
 NVCC = nvcc
-CUOPT = --compiler-options='-DCUDA=1 $(OPT)'
 #OPT = -Wall -pedantic -ansi -Wno-pointer-sign -D _DEFAULT_SOURCE -D_XOPEN_SOURCE=700 -D_REENTRANT -DPURIFY -O3 _BSD_SOURCE 
 OPT = -Wall -pedantic -std=c99 -Wno-pointer-sign -O3
 COMP = $(CC) $(OPT) $(DBG)
@@ -48,11 +47,16 @@ LUK = lib/luks/
 # dynamics linking options
 #DLO = -ldl -lm -I${OPENSSLI} -L${OPENSSLL} -lcrypto -lssl -lpthread  -pthread 
 DLO = -ldl -lm -lssl -lcrypto -lpthread -pthread
+CUOPT = --compiler-options='-DCUDA_ENGINE=1 $(OPT) $(DLO)'
 
 OBJS= random.o af.o config.o fastpbkdf2.o luks.o utils.o luks_decrypt.o thread.o attacks.o engine.o
+CUOBJS= random.o af.o config.o fastpbkdf2.o luks.o utils.o luks_decrypt.o thread.o attacks.o engine.o cuda_pbkdf2.o luks_cuda.o
 
 skul: $(SRC)skul.c $(OBJS)
 	$(COMP) -o $@ $(SRC)skul.c $(DIR)luks.o $(DIR)random.o $(DIR)af.o $(DIR)utils.o $(DIR)luks_decrypt.o $(DIR)config.o $(DIR)thread.o $(DIR)attacks.o $(DIR)fastpbkdf2.o $(DLO) $(DIR)engine.o
+
+skulcu: $(SRC)skul.c $(CUOBJS)
+	$(COMP) -o $@ $(SRC)skul.c $(DIR)luks.o $(DIR)random.o $(DIR)af.o $(DIR)utils.o $(DIR)luks_decrypt.o $(DIR)config.o $(DIR)thread.o $(DIR)attacks.o $(DIR)fastpbkdf2.o $(DIR)engine.o $(DIR)cuda_pbkdf2.o $(DIR)luks_cuda.o $(DLO)
 
 skul_dbg: $(SRC)skul.c $(OBJS)
 	$(COMPDBG) -o $@ $(SRC)skul.c $(DIR)random.o $(DIR)af.o $(DIR)utils.o $(DIR)luks_decrypt.o $(DIR)config.o $(DIR)thread.o $(DIR)attacks.o $(DIR)fastpbkdf2.o $(DLO) 
@@ -86,6 +90,12 @@ luks.o: $(LUK)luks.c
 
 engine.o: $(LIB)engine.c
 	$(COMP) -o $(DIR)$@ -c $(LIB)engine.c
+
+luks_cuda.o: $(LUK)luks_cuda_decrypt.c
+	$(COMP) -o $(DIR)$@ -c $(LUK)luks_cuda_decrypt.c
+
+cuda_pbkdf2.o: $(CRY)cuda_pbkdf2.cu 
+	$(NVCC) $(CUOPT) -o $(DIR)$@ -c $(CRY)cuda_pbkdf2.cu 
 
 
 clean:

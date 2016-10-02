@@ -1,9 +1,11 @@
+extern "C"{
 #include "cuda_pbkdf2.h"
-#include "cudakernel.h"
+#include "../utils.h"
+}
 #include <openssl/hmac.h>
+#include <openssl/sha.h>
 #include <string.h>
 #include <cuda.h>
-
 
 __device__
 void sha1_process( const SHA_DEV_CTX *ctx, SHA_DEV_CTX *data) {
@@ -171,7 +173,7 @@ void sha1_process( const SHA_DEV_CTX *ctx, SHA_DEV_CTX *data) {
 }
 
 __global__ void kernel_pbkdf2_sha1_32( gpu_inbuffer *inbuffer, 
-									gpu_outbuffer *outbuffer, iterations) {
+									gpu_outbuffer *outbuffer, int iterations) {
     int i;
 	SHA_DEV_CTX temp_ctx, pmk_ctx;
     
@@ -203,15 +205,17 @@ __global__ void kernel_pbkdf2_sha1_32( gpu_inbuffer *inbuffer,
     CPY_DEVCTX(pmk_ctx, outbuffer[idx].pmk2);
 }
 
+
 /* Custom version of pbkdf2: 
  * - Works on a list of passwords 
  * - Outputs a list of 32byte derived keys
+ * - num_pwds must be multiple of 64
  */
-int cuda_pbkdf2_hmac_sha1_32(const uint8_t **pwdlst, size_t num_pwds, const uint8_t *salt, 
-						  size_t salt_len, uint32_t iterations, uint8_t **key){
+int cuda_pbkdf2_hmac_sha1_32(unsigned char **pwdlst, int num_pwds, unsigned char *salt, 
+						  size_t saltlen, uint32_t iterations, uint8_t **key){
 
 
-	unsigned char pad[64], temp[32], passwd;
+	unsigned char pad[64], temp[32], *passwd;
 	int i=0,j=0,passwdlen;
 	SHA_CTX ctx_pad;
     gpu_inbuffer *h_inbuffer, *d_inbuffer;
@@ -221,13 +225,13 @@ int cuda_pbkdf2_hmac_sha1_32(const uint8_t **pwdlst, size_t num_pwds, const uint
 	/* cuda allocation */
 	h_inbuffer = (gpu_inbuffer *)calloc(num_pwds, sizeof(gpu_inbuffer));
 	if(h_inbuffer == NULL){
-		errprint("Cuda error: %d - %s\n",cudaReturnValue, cudaGetErrorString(cudaReturnValue));
+		errprint("Malloc error\n");
 		return 0;
 	}
 
 	h_outbuffer = (gpu_outbuffer *)calloc(num_pwds, sizeof(gpu_outbuffer));
 	if(h_outbuffer == NULL){
-		errprint("Cuda error: %d - %s\n",cudaReturnValue, cudaGetErrorString(cudaReturnValue));
+		errprint("Malloc error\n");
 		return 0;
 	}
 
@@ -244,8 +248,8 @@ int cuda_pbkdf2_hmac_sha1_32(const uint8_t **pwdlst, size_t num_pwds, const uint
 	}
 
 	for(i = 0; i < num_pwds; i++){
-		passwd = passlist[i];
-		passwdlen = strlen(passwd);
+		passwd = pwdlst[i];
+		passwdlen = strlen((const char *)passwd);
 
 		memcpy(pad, passwd, passwdlen);
         memset(pad + passwdlen, 0, sizeof(pad) - passwdlen);
@@ -289,7 +293,7 @@ int cuda_pbkdf2_hmac_sha1_32(const uint8_t **pwdlst, size_t num_pwds, const uint
 
 
 	/* call the cuda kernel */
-	kernel_pbkdf2_sha1_32<<<NUM_BLK, NUM_THR>>>(d_inbuffer, d_outbuffer, iterations);
+	kernel_pbkdf2_sha1_32<<<num_pwds/64, 64>>>(d_inbuffer, d_outbuffer, iterations);
 	cudaDeviceSynchronize();
 
 	if((cudaReturnValue = cudaGetLastError()) != cudaSuccess){

@@ -127,8 +127,7 @@ typedef struct {
 } gpu_outbuffer512;
 
 int cuda_pbkdf2_hmac_sha1_32(const uint8_t **pwdlst, size_t num_pwds, const uint8_t *salt, 
-						  size_t salt_len, uint32_t iterations, uint8_t **key){
-
+						  size_t salt_len, uint32_t iterations, uint8_t **key);
 
 #endif
 

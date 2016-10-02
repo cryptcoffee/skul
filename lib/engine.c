@@ -122,14 +122,44 @@ int cpu_engine(SKUL_CTX *ctx){
 
 }
 
-#if CUDA
+#if CUDA_ENGINE
 int cuda_engine(SKUL_CTX *ctx){
 
-	return 1;
+	int res=0;
+	struct timeval t0,t1;
+	unsigned long sec;
+
+	printf("Attack mode: CUDA Password List\n\n");
+	if(ctx->prompt){
+		printf("Press enter to start cracking!");
+		getchar();
+		printf("\n");
+	}
+
+	/* START GLOBAL TIMER */
+	gettimeofday(&t0,NULL);
+
+	for(j=0;j<ctx->num_pwds;j++){ /* use this loop to manage multiple 
+									passphrases like keyslots in LUKS */
+
+		ctx->cur_pwd = ctx->pwd_ord[j];
+		res=cuda_pwlist(ctx);
+		if(res)
+			break;
+	}
+
+
+	/* STOP GLOBAL TIMER */
+	gettimeofday(&t1,NULL);
+	sec=t1.tv_sec-t0.tv_sec;
+	printf("TOTAL TIME: ");
+	print_time(sec);
+
+	return res;
 }
 #endif
 
-#if CUDA
+#if CUDA_ENGINE
 int cuda_cpu_engine(SKUL_CTX *ctx){
 
 	return 1;
@@ -146,7 +176,7 @@ int engine(SKUL_CTX *ctx){
 			break;
 
 		case(CUDA):
-#if CUDA
+#if CUDA_ENGINE
 			ret=cuda_engine(ctx);
 #else
 			errprint("Unsupported engine in this build\n");
@@ -155,7 +185,7 @@ int engine(SKUL_CTX *ctx){
 
 		case(CUDA_CPU):
 
-#if CUDA
+#if CUDA_ENGINE
 			ret=cuda_cpu_engine(ctx);
 #else
 			errprint("Unsupported engine in this build\n");

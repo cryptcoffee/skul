@@ -42,7 +42,7 @@ typedef struct luks_header{
 
 	/* functions */
 	int (*pbkdf2_function)();
-	int (*decrypt_masterkey)();
+	int (*decrypt)();
 }pheader;
 
 
