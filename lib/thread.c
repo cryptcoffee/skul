@@ -26,7 +26,7 @@
 
 #include"thread.h"
 #include"utils.h"
-#include "luks/decrypt.h"
+#include "luks/luks_decrypt.h"
 #include<pthread.h>
 #include<unistd.h>
 #include <openssl/evp.h>

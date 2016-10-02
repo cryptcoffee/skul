@@ -145,19 +145,27 @@ int engine(SKUL_CTX *ctx){
 			ret=cpu_engine(ctx);
 			break;
 
-#if CUDA
 		case(CUDA):
+#if CUDA
 			ret=cuda_engine(ctx);
+#else
+			errprint("Unsupported engine in this build\n");
+#endif
 			break;
-		
+
 		case(CUDA_CPU):
+
+#if CUDA
 			ret=cuda_cpu_engine(ctx);
+#else
+			errprint("Unsupported engine in this build\n");
+#endif
+			break;
 
 		default:
 			errprint("Unknown engine\n");
 
 	}
-#endif
 
 	return ret;
 }

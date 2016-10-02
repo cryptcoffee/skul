@@ -2,7 +2,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include "../utils.h"
-#include "decrypt.h"
+#include "luks_decrypt.h"
 #include "../../src/skul.h"
 #include "luks.h"
 

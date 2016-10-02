@@ -38,7 +38,7 @@
 #include "../utils.h"
 #include "../crypto/af.h"
 #include "../crypto/fastpbkdf2.h"
-#include "decrypt.h"
+#include "luks_decrypt.h"
 
 
 

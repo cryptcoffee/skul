@@ -38,7 +38,7 @@
 #include "../lib/config.h"
 #include "../lib/thread.h"
 #include "skul.h"
-#include "../lib/luks/decrypt.h"
+#include "../lib/luks/luks_decrypt.h"
 #include <stdint.h>
 #include <inttypes.h>
 #include <math.h>

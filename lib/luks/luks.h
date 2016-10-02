@@ -39,6 +39,10 @@ typedef struct luks_header{
 	uint32_t mk_digest_iter;
 	unsigned char *uuid;
 	keyslot_t keyslot[LUKS_NUMKEYS];
+
+	/* functions */
+	int (*pbkdf2_function)();
+	int (*decrypt_masterkey)();
 }pheader;
 
 
