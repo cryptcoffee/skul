@@ -22,306 +22,40 @@
  *    along with Skul.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+
+
+#define _BSD_SOURCE
+#define _DEFAULT_SOURCE
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <unistd.h>
+#include <math.h>
 #include "../utils.h"
+#include "../config.h"
+#include "luks.h"
+#include "_luks_decrypt.h"
 #include "../../src/skul.h"
+#include "../crypto/af.h"
 #include <openssl/evp.h>
+#include <openssl/sha.h>
+#include <openssl/hmac.h>
+#include <openssl/aes.h>
+#include <sys/time.h>
 
-int decrypt_ECB(unsigned char *key, unsigned char *encrypted, int encrypted_len,
-		unsigned char * decrypted, unsigned char *iv){
-	int decryptedLength, lastDecryptLength = 0;
-	EVP_CIPHER_CTX cipher;
-
-	decryptedLength = 0;
-	lastDecryptLength = 0;
-
-	EVP_CIPHER_CTX_init(&cipher);
-
-	if(1 != EVP_DecryptInit_ex(&cipher, 
-				EVP_aes_256_ecb(), NULL, key, NULL)){
-		errprint("Error setting aes\n");
-		return 0;
-	}
-
-	if(!EVP_CIPHER_CTX_set_padding(&cipher, 0)){
-		errprint("This is so strange.. set padding should always return 1\n");
-		return 0;
-	}
-
-	if(!EVP_DecryptUpdate(&cipher, 
-				decryptedData, &decryptedLength, 
-				encryptedData, encryptedLength)){
-		errprint("EVP_DecryptUpdate_ex error\n");
-		return 0;
-	}
-
-	if(!EVP_DecryptFinal_ex(&cipher, 
-			decryptedData + decryptedLength, 
-			&lastDecryptLength)){
-		errprint("EVP_DecryptFinal_ex error\n");
-		return 0;
-	}
-	
-	*length = decryptedLength + lastDecryptLength;
-	
-	EVP_CIPHER_CTX_cleanup(&cipher);
-	return 1;
-
-
-}
-
-int decrypt_CBC(unsigned char *key, unsigned char *encrypted, int encrypted_len,
-		unsigned char * decrypted, unsigned char *iv){
-
-	int decryptedLength, lastDecryptLength = 0;
-	EVP_CIPHER_CTX cipher;
-
-	decryptedLength = 0;
-	lastDecryptLength = 0;
-
-	EVP_CIPHER_CTX_init(&cipher);
-
-	if(1 != EVP_DecryptInit_ex(&cipher, 
-				EVP_aes_256_cbc(), NULL, key, iv)){
-		errprint("Error setting aes\n");
-		return 0;
-	}
-
-	if(!EVP_CIPHER_CTX_set_padding(&cipher, 0)){
-		errprint("This is so strange.. set padding should always return 1\n");
-		return 0;
-	}
-
-	if(!EVP_DecryptUpdate(&cipher, 
-				decryptedData, &decryptedLength, 
-				encryptedData, encryptedLength)){
-		errprint("EVP_DecryptUpdate_ex error\n");
-		return 0;
-	}
-
-	if(!EVP_DecryptFinal_ex(&cipher, 
-			decryptedData + decryptedLength, 
-			&lastDecryptLength)){
-		errprint("EVP_DecryptFinal_ex error\n");
-		return 0;
-	}
-	
-	*length = decryptedLength + lastDecryptLength;
-	
-	EVP_CIPHER_CTX_cleanup(&cipher);
-	return 1;
-
-}
-
-int decrypt_XTS(unsigned char *key, unsigned char *encrypted, int encrypted_len
-		unsigned char * decrypted, unsigned char *iv){
-
-	int decryptedLength, lastDecryptLength = 0;
-	EVP_CIPHER_CTX cipher;
-
-	decryptedLength = 0;
-	lastDecryptLength = 0;
-
-	EVP_CIPHER_CTX_init(&cipher);
-
-	if(1 != EVP_DecryptInit_ex(&cipher, 
-				EVP_aes_256_xts(), NULL, key, iv)){
-		errprint("Error setting aes\n");
-		return 0;
-	}
-
-	if(!EVP_CIPHER_CTX_set_padding(&cipher, 0)){
-		errprint("This is so strange.. set padding should always return 1\n");
-		return 0;
-	}
-
-	if(!EVP_DecryptUpdate(&cipher, 
-				decryptedData, &decryptedLength, 
-				encryptedData, encryptedLength)){
-		errprint("EVP_DecryptUpdate_ex error\n");
-		return 0;
-	}
-
-	if(!EVP_DecryptFinal_ex(&cipher, 
-			decryptedData + decryptedLength, 
-			&lastDecryptLength)){
-		errprint("EVP_DecryptFinal_ex error\n");
-		return 0;
-	}
-	
-	*length = decryptedLength + lastDecryptLength;
-	
-	EVP_CIPHER_CTX_cleanup(&cipher);
-	return 1;
-
-}
-
-int set_essivkey(unsigned char *ivkey, 
-		unsigned char *usrkey, int len){
-
-	SHA256_CTX sha256;
-
-	if(!(SHA256_Init(&sha256))){
-		errprint("SHA256_Init error!\n");
-		return 0;
-	}
-	if(!(SHA256_Update(&sha256,
-					usrkey,len))){ 
-		errprint("SHA256_Update error\n");
-		return 0;
-	}
-	if(!(SHA256_Final(ivkey,&sha256))){
-		errprint("SHA256_Final error\n");
-		return 0;
-	}
-
-	return 1;
-}
-
-int gen_essiv(unsigned char *key, unsigned char *ciphertext, 
-		int *outlen, unsigned char *plaintext, 
-		int length){
-
-	int outl, lastDecryptLength=0, r=1;
-	EVP_CIPHER_CTX cipher;
-
-	outl = 0;
-	lastDecryptLength = 0;
-
-	/* Create and initialise the context */
-	EVP_CIPHER_CTX_init(&cipher);
-
-	/* Initialise the decryption operation. */
-	if(1 != EVP_EncryptInit_ex(&cipher, EVP_aes_256_ecb(), NULL, key, NULL)){ 
-		printf("Error setting aes\n");
-		r=0;
-		goto end;
-	}
-
-	if(!EVP_CIPHER_CTX_set_padding(&cipher, 0)){
-		printf("This is so strange.. should always return 1\n");
-	}
-
-	if(!EVP_EncryptUpdate(&cipher, 
-				ciphertext, &outl, 
-				plaintext, length)){
-		printf("EVP_DecryptUpdate_ex error\n");
-		r=0;
-		goto end;
-	}
-
-	if(!EVP_EncryptFinal_ex(&cipher, 
-			plaintext + outl, 
-			&lastDecryptLength)){
-		printf("EVP_DecryptFinal_ex error\n");
-		r=0;
-		goto end;
-	}
-	
-	*outlen = outl + lastDecryptLength;
-	
-end:
-
-	EVP_CIPHER_CTX_cleanup(&cipher);
-	return r;
-}
-
-int gen_xtsiv(unsigned char *iv_salt, unsigned char *iv, 
-		int *outlen, unsigned char *buff, int length){
-
-	// xts plain doesn't use salt
-	snprintf(iv,length,"%s",buff);
-	*outlen = lenght;
-
-	return 1;
-
-}
-
-int gen_plainiv(unsigned char *iv_salt, unsigned char *iv, 
-		int *outlen, unsigned char *buff, int length){
-
-	// plain iv doesn't use salt
-	memcpy(iv, buff, lenght);
-	*outlen = length;
-
-	return 1;
-}
-
-int testkeyhash(char **key_list, int numkeys, char *salt, 
-		int iterations, char *hash, int *win_pos){
-
-	char **keyhashes;
-	int i,j,win=0;
-
-	keyhashes = calloc(numkeys, sizeof(char *));
-	for(i=0;i<numkeys;i++){
-		keyhashes[i] = calloc(LUKS_DIGESTSIZE,sizeof(char));
-	}
-
-	if(!(header->pbkdf2_funcion(key_list, numkeys, salt,
-						LUKS_SALTSIZE, iterations,
-						keyhahses))){
-		errprint("Error hashing user keys\n");
-		win=0;
-		goto end;
-	}
-
-
-	for(i=0;i<numkeys;i++){
-		j=memcmp(keyhashes[i], hash, LUKS_DIGESTSIZE);
-		if(j=0){ 
-			*win_pos=i;
-			win=1;
-			break;
-		}
-	}
-
-end:
-	for(i=0;i<numkeys;i++){
-		free(keyhashes[i]);
-	}
-	free(keyhashes);
-
-	return win;
-}
-
-int testkeydecryption(int mode, char *key, char *crypt_disk, int keylen){
-
-	char plain_disk[32],*xtsiv;
-	int i,len;
-
-	unsigned char guess[64] = {	0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-								0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-								0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-								0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-								0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-								0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-								0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-								0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00	};
-
-	ctx->decrypt(key, crypt_disk, 16, &len, plain_disk, guess); // using guess as a random iv
-	i=memcmp(plain_disk, guess, 16);
-
-	if(i!=0)
-		return 0;
-
-	return 1;
-}
-
-
-int luks_cuda_open_key(char **keys, int numkeys, SKUL_CTX *ctx, int *win_pos){ 
+int luks_cuda_open_key(unsigned char **keys, int numkeys, SKUL_CTX *ctx, 
+		int *win_pos, int *progress){ 
 		
 	unsigned char buff[AES_BLOCK_SIZE], iv[2*AES_BLOCK_SIZE], 
-				  iv_salt[SHA256_DIGEST_LENGTH], *master_list;
-	unsigned int AFSectors, outl;
+				  iv_salt[SHA256_DIGEST_LENGTH], **master_list=NULL;
+	unsigned int AFSectors;
 	uint32_t sec, sector;
-	int j=0,r=0;
-	lkey_t master, split, usrKey;
-	uint8_t userKeyshashed;
+	int j=0,r=0,i=0;
+	lkey_t master, split;
+	uint8_t **usrKeyshashed;
 	pheader *header;
-
+	struct timeval t0,t1;
+	unsigned long seconds;
 
 	header = &(ctx->tctx.luks->header);
 
@@ -333,17 +67,17 @@ int luks_cuda_open_key(char **keys, int numkeys, SKUL_CTX *ctx, int *win_pos){
 	if(!ctx->fast){
 		master_list = calloc(numkeys, sizeof(char *));
 		for(i=0;i<numkeys;i++)
-			master_list[i] = calloc(header->key_bytes, sizeof(char));
+			master_list[i] = (unsigned char *)calloc(header->key_bytes, sizeof(char));
 	}
 
 	usrKeyshashed = calloc(numkeys,sizeof(char*));
 	for(i=0;i<numkeys;i++){
-		usrKeyshashed[i] = calloc( strlen(key[i]), sizeof(char));
+		usrKeyshashed[i] = calloc( LUKS_SALTSIZE, sizeof(char));
 	}
 
-	if(!(header->pbkdf2_funcion(keys, numkeys, header->keyslot[ctx->cur_pwd].salt,
+	if(!(ctx->tctx.luks->cuda_pbkdf2_function(keys, numkeys, header->keyslot[ctx->cur_pwd].salt,
 						LUKS_SALTSIZE, header->keyslot[ctx->cur_pwd].iterations,
-						userKeyshashed))){
+						usrKeyshashed))){
 		errprint("Error hashing user keys\n");
 		return 0;
 	}
@@ -351,7 +85,7 @@ int luks_cuda_open_key(char **keys, int numkeys, SKUL_CTX *ctx, int *win_pos){
 	for(i=0; i<numkeys; i++){
 
 		if(ctx->tctx.luks->iv_mode == ESSIV){
-			if(!(set_essivkey(iv_salt, usrKeyhashed.key, 32))){
+			if(!(set_essivkey(iv_salt, usrKeyshashed[i], 32))){
 				errprint("Error generating iv_salt\n");
 				continue;
 			}
@@ -369,14 +103,14 @@ int luks_cuda_open_key(char **keys, int numkeys, SKUL_CTX *ctx, int *win_pos){
 			buff[2] = (sec >> 8) & 0xff;
 			buff[3] = (sec ) & 0xff;
 
-			if(!header->gen_iv(iv_salt, iv, &j, buff, AES_BLOCK_SIZE)){
+			if(!ctx->tctx.luks->gen_iv(iv_salt, iv, &j, buff, AES_BLOCK_SIZE)){
 				errprint("Error generating iv\n");
 				continue;
 			}
 	
-			if(!header->decrypt(userKeyshashed[i],
+			if(!ctx->tctx.luks->decrypt(usrKeyshashed[i],
 						ctx->tctx.luks->encrypted.key+(sector*SECTOR_SIZE),
-						SECTOR_SIZE,&outl, split.key+(sector*SECTOR_SIZE),iv)){
+						SECTOR_SIZE, split.key+(sector*SECTOR_SIZE),iv)){
 				errprint("Error decrypting masterkey\n");
 				continue;
 			}
@@ -390,21 +124,26 @@ int luks_cuda_open_key(char **keys, int numkeys, SKUL_CTX *ctx, int *win_pos){
 		}
 	
 		if(ctx->fast){
-			r=testkeydecryption(master.key, ctx->tctx.luks->crypt_disk, 
+			r=testkeydecryption(ctx->tctx.luks, master.key, ctx->tctx.luks->crypt_disk, 
 					header->key_bytes);
+
 			if(r){
 				*win_pos = i;
 				r=1;
 				goto end;
 			}
+
+			*progress = *progress +1;
 		}else{
 			memcpy(master_list[i], master.key, header->key_bytes);
 		}
 
 	}
 		
-	r=testkeyhash(master_list, numkeys, header->mk_digest_salt,
-			header->mk_digest_iter, header->mk_digest, *win_pos);
+	if(!ctx->fast){
+		r=cuda_testkeyhash(ctx->tctx.luks, master_list, numkeys, header->mk_digest_salt,
+				header->mk_digest_iter, header->mk_digest, win_pos, progress);
+	}
 
 end:
 	/* clean the room */
@@ -413,7 +152,7 @@ end:
 	for(i=0;i<numkeys;i++){
 		free(usrKeyshashed[i]);
 	}
-	free(usKeyshashed);
+	free(usrKeyshashed);
 	if(!ctx->fast){
 		for(i=0;i<numkeys;i++)
 			free(master_list[i]);

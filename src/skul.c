@@ -290,6 +290,9 @@ int SKUL_CTX_init_target(SKUL_CTX *ctx, int target){
 			ctx->init_target_ctx = LUKS_init;
 			ctx->cpy_target_ctx = LUKS_CTXcpy;
 			ctx->open_key = luks_open_key;
+#if CUDA_ENGINE
+			ctx->cuda_open_key = luks_cuda_open_key;
+#endif
 			ctx->clean_target_ctx = LUKS_clean;
 			ctx->print_header = LUKS_print_header;
 
@@ -299,7 +302,7 @@ int SKUL_CTX_init_target(SKUL_CTX *ctx, int target){
 			}
 
 			if(!ctx->init_target_ctx(ctx->tctx, ctx->pwd_default, &(ctx->num_pwds), 
-					ctx->pwd_ord, ctx->path, ctx->UP, &(ctx->attack_mode))){
+					ctx->pwd_ord, ctx->path, ctx->UP, &(ctx->attack_mode), ctx->engine)){
 				errprint("Error initializing LUKS context\n");
 				return 0;
 			}
@@ -320,6 +323,7 @@ int SKUL_CTX_cpy(SKUL_CTX *dst, SKUL_CTX *src){
 	dst->clean_target_ctx = src->clean_target_ctx;
 	dst->cpy_target_ctx = src->cpy_target_ctx;
 	dst->open_key = src->open_key;
+	dst->cuda_open_key = src->cuda_open_key;
 	dst->UP = src->UP;
 	dst->attack_mode = src->attack_mode;
 	dst->fast = src->fast;

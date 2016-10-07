@@ -23,6 +23,8 @@ typedef enum {
 	/* other targets goes here*/
 }target_t;
 
+// TODO: typedef union target_ctx_t{ **contexts**} tctx;
+
 typedef struct skul_ctx{
 	
 	target_t target;
@@ -30,6 +32,8 @@ typedef struct skul_ctx{
 	void (*clean_target_ctx)();
 	int (*cpy_target_ctx)();
 	int (*open_key)();
+	int (*cuda_open_key)(char **keys, int numkeys, struct skul_ctx *ctx, 
+			int *win_pos, int *progress);
 	void (*print_header)();
 	usrp UP;
 	int attack_mode;

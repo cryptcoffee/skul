@@ -36,138 +36,13 @@
 #include "openssl/sha.h"
 #include "openssl/aes.h"
 #include "../utils.h"
+#include "_luks_decrypt.h"
 #include "../crypto/af.h"
 #include "../crypto/fastpbkdf2.h"
 #include "luks_decrypt.h"
 
 
-
-int decrypt(int mode, unsigned char *key, unsigned char *encryptedData, 
-		int encryptedLength,unsigned int *length, 
-		unsigned char *decryptedData, unsigned char *iv){
-
-	int decryptedLength, lastDecryptLength = 0;
-	EVP_CIPHER_CTX cipher;
-
-	decryptedLength = 0;
-	lastDecryptLength = 0;
-
-	EVP_CIPHER_CTX_init(&cipher);
-
-	/* Initialise the decryption operation.*/
-	switch(mode){
-		case ECB:
-			if(1 != EVP_DecryptInit_ex(&cipher, 
-						EVP_aes_256_ecb(), NULL, key, NULL)){
-				printf("Error setting aes\n");
-			}
-			break;
-		case CBC:
-			if(1 != EVP_DecryptInit_ex(&cipher, 
-						EVP_aes_256_cbc(), NULL, key, iv)){ 
-				printf("Error setting aes\n");
-			}
-			break;
-		case XTS:
-			if(1 != EVP_DecryptInit_ex(&cipher,
-						EVP_aes_128_xts(),NULL,key,iv)){
-				printf("Error setting aes\n");
-			}
-	}
-
-	if(!EVP_CIPHER_CTX_set_padding(&cipher, 0)){
-		printf("This is so strange.. should always return 1\n");
-	}
-
-	if(!EVP_DecryptUpdate(&cipher, 
-				decryptedData, &decryptedLength, 
-				encryptedData, encryptedLength)){
-		printf("EVP_DecryptUpdate_ex error\n");
-	}
-
-	if(!EVP_DecryptFinal_ex(&cipher, 
-			decryptedData + decryptedLength, 
-			&lastDecryptLength)){
-		printf("EVP_DecryptFinal_ex error\n");
-	}
-	
-	*length = decryptedLength + lastDecryptLength;
-	
-	EVP_CIPHER_CTX_cleanup(&cipher);
-	return 1;
-}
-
-int set_essivkey(unsigned char *ivkey, 
-		unsigned char *usrkey, int len){
-
-	SHA256_CTX sha256;
-
-	if(!(SHA256_Init(&sha256))){
-		errprint("SHA256_Init error!\n");
-		return 0;
-	}
-	if(!(SHA256_Update(&sha256,
-					usrkey,len))){ 
-		errprint("SHA256_Update error\n");
-		return 0;
-	}
-	if(!(SHA256_Final(ivkey,&sha256))){
-		errprint("SHA256_Final error\n");
-		return 0;
-	}
-
-	return 1;
-}
-
-int gen_essiv(unsigned char *key, unsigned char *ciphertext, 
-		int *outlen, unsigned char *plaintext, 
-		int length){
-
-	int outl, lastDecryptLength=0, r=1;
-	EVP_CIPHER_CTX cipher;
-
-	outl = 0;
-	lastDecryptLength = 0;
-
-	/* Create and initialise the context */
-	EVP_CIPHER_CTX_init(&cipher);
-
-	/* Initialise the decryption operation. */
-	if(1 != EVP_EncryptInit_ex(&cipher, EVP_aes_256_ecb(), NULL, key, NULL)){ 
-		printf("Error setting aes\n");
-		r=0;
-		goto end;
-	}
-
-	if(!EVP_CIPHER_CTX_set_padding(&cipher, 0)){
-		printf("This is so strange.. should always return 1\n");
-	}
-
-	if(!EVP_EncryptUpdate(&cipher, 
-				ciphertext, &outl, 
-				plaintext, length)){
-		printf("EVP_DecryptUpdate_ex error\n");
-		r=0;
-		goto end;
-	}
-
-	if(!EVP_EncryptFinal_ex(&cipher, 
-			plaintext + outl, 
-			&lastDecryptLength)){
-		printf("EVP_DecryptFinal_ex error\n");
-		r=0;
-		goto end;
-	}
-	
-	*outlen = outl + lastDecryptLength;
-	
-end:
-
-	EVP_CIPHER_CTX_cleanup(&cipher);
-	return r;
-}
-
-int check_mode(unsigned char *cipher_mode, int *iv_mode, int *chain_mode){
+int check_mode(LUKS_CTX *ctx, unsigned char *cipher_mode, int *iv_mode, int *chain_mode){
 
 	unsigned char *iv;
 
@@ -177,22 +52,26 @@ int check_mode(unsigned char *cipher_mode, int *iv_mode, int *chain_mode){
 	/* if no '-' then ecb is used */
 	if((iv = strstr(cipher_mode, "-"))==NULL){
 		*iv_mode = ECB;
+		ctx->gen_iv = gen_plainiv;
 	}else{
 	
 		iv++;
 		/* plain64 mode */
 		if(strcmp(iv,"plain64") == 0){
 			*iv_mode = PLAIN64;
+			ctx->gen_iv = gen_xtsiv;
 		}
 
 		/* plain mode */
 		if(strcmp(iv,"plain")==0){
 			*iv_mode = PLAIN;
+			ctx->gen_iv = gen_plainiv;
 		}
 	
 		/* ESSIV mode */
 		if(strcmp(iv,"essiv:sha256") == 0 ){
 			*iv_mode = ESSIV;
+			ctx->gen_iv = gen_essiv;
 		}
 
 		if(*iv_mode==0){
@@ -203,127 +82,29 @@ int check_mode(unsigned char *cipher_mode, int *iv_mode, int *chain_mode){
 	}
 	if(strncmp(cipher_mode,"ecb", 3)==0){
 		*chain_mode = ECB;
+		ctx->decrypt = decrypt_ECB;
 		return 1;
 	}
 
 	if(strncmp(cipher_mode,"cbc", 3)==0){
 		*chain_mode = CBC;
+		ctx->decrypt = decrypt_CBC;
 		return 1;
 	}
 
 	if(strncmp(cipher_mode,"xts", 3)==0){
 		*chain_mode = XTS;
+		ctx->decrypt = decrypt_XTS;
 		return 1;
 	}
 	return 0;
-}
-
-int testkeyhash(char *key, int keylen, char *salt, 
-		int iterations, char *hash, char *hash_spec, int pbk_hash){
-
-	char *keyhash;
-	int i;
-
-	keyhash = calloc(LUKS_DIGESTSIZE,sizeof(char));
-
-	switch(pbk_hash){
-		case SHA_ONE:
-			fastpbkdf2_hmac_sha1(
-				key, 
-				keylen,
-				salt,
-				LUKS_SALTSIZE,
-				iterations, 
-				keyhash,
-				LUKS_DIGESTSIZE); 
-			break;
-			
-		case SHA_TWO_FIVE_SIX:
-			fastpbkdf2_hmac_sha256(
-				key, 
-				keylen,
-				salt,
-				LUKS_SALTSIZE,
-				iterations, 
-				keyhash,
-				LUKS_DIGESTSIZE); 
-			break;
-
-		case SHA_FIVE_ONE_TWO:
-			fastpbkdf2_hmac_sha512(
-				key, 
-				keylen,
-				salt,
-				LUKS_SALTSIZE,
-				iterations, 
-				keyhash,
-				LUKS_DIGESTSIZE);
-			break;
-			
-		/* No fastpbkdf2 support for ripemd */
-		case RIPEMD:
-			if(!(PKCS5_PBKDF2_HMAC(key, keylen, salt, LUKS_SALTSIZE,
-						iterations, EVP_get_digestbyname(hash_spec), LUKS_DIGESTSIZE, keyhash))){
-				errprint("PBKDF2 error\n");
-				free(keyhash);
-				return 0;
-			}
-			break;
-
-	}
-
-	i=memcmp(keyhash, hash, LUKS_DIGESTSIZE);
-
-	free(keyhash);
-
-	if(i==0)
-		return 1;
-
-	return 0;
-}
-
-int testkeydecryption(int mode, char *key, char *crypt_disk, int keylen){
-
-	char *plain_disk,*xtsiv;
-	int i,len;
-	unsigned char cbciv[] = {	0x62, 0x62, 0x62, 0x62,
-								0x62, 0x62, 0x62, 0x62,
-								0x62, 0x62, 0x62, 0x62,
-								0x62, 0x62, 0x62, 0x62	}; /*random IV*/
-
-	unsigned char guess[16] = {	0x00, 0x00, 0x00, 0x00, 
-								0x00, 0x00, 0x00, 0x00,
-								0x00, 0x00, 0x00, 0x00, 
-								0x00, 0x00, 0x00, 0x00	};
-
-	plain_disk = calloc(32,sizeof(char));
-
-	if(mode==XTS){
-		if(!(xtsiv=calloc(64,sizeof(char)))){
-			errprint("malloc error!\n");
-			free(plain_disk);
-			return 0;
-		}
-		decrypt(mode,key, crypt_disk, 16, &len, plain_disk, xtsiv);
-		i=memcmp(plain_disk, guess, 16);
-		free(xtsiv);
-	}else{
-		decrypt(mode,key, crypt_disk, 32, &len, plain_disk, cbciv);
-		i=memcmp(plain_disk+16, guess, 16);
-	}
-
-	free(plain_disk);
-
-	if(i!=0)
-		return 0;
-
-	return 1;
 }
 
 int luks_open_key(char *key, int keylen, SKUL_CTX *ctx){ 
 		
-	unsigned char *iv_salt=NULL, *buff, *iv;
-	unsigned int AFSectors, outl;
+	unsigned char buff[AES_BLOCK_SIZE], iv[2*AES_BLOCK_SIZE], 
+				  iv_salt[SHA256_DIGEST_LENGTH];
+	unsigned int AFSectors;
 	uint32_t sec, sector;
 	int j=0,r=0;
 	lkey_t master, split, usrKey, usrKeyhashed;
@@ -337,89 +118,27 @@ int luks_open_key(char *key, int keylen, SKUL_CTX *ctx){
 	split.keylen = ctx->tctx.luks->encrypted.keylen;
 	usrKey.key = key;
 	usrKey.keylen = keylen;
-	buff = calloc(AES_BLOCK_SIZE,sizeof(char));
-	iv = NULL;
 
 	/* 1) hash the password provided by user */	
 	usrKeyhashed.key = calloc(header->key_bytes,sizeof(char));
 	usrKeyhashed.keylen = header->key_bytes;
 
-	switch(ctx->tctx.luks->pbk_hash){
-		case SHA_ONE:
-			fastpbkdf2_hmac_sha1(
-				usrKey.key, 
-				usrKey.keylen,
-				header->keyslot[ctx->cur_pwd].salt,
-				LUKS_SALTSIZE,
-				header->keyslot[ctx->cur_pwd].iterations, 
-				usrKeyhashed.key,
-				usrKeyhashed.keylen); 
-			break;
-			
-		case SHA_TWO_FIVE_SIX:
-			fastpbkdf2_hmac_sha256(
-				usrKey.key, 
-				usrKey.keylen,
-				header->keyslot[ctx->cur_pwd].salt,
-				LUKS_SALTSIZE,
-				header->keyslot[ctx->cur_pwd].iterations, 
-				usrKeyhashed.key,
-				usrKeyhashed.keylen);
-			break;
-
-		case SHA_FIVE_ONE_TWO:
-			fastpbkdf2_hmac_sha512(
-				usrKey.key, 
-				usrKey.keylen,
-				header->keyslot[ctx->cur_pwd].salt,
-				LUKS_SALTSIZE,
-				header->keyslot[ctx->cur_pwd].iterations, 
-				usrKeyhashed.key,
-				usrKeyhashed.keylen);
-			break;
-
-		case RIPEMD:
-			if(!(PKCS5_PBKDF2_HMAC(usrKey.key, 
-							usrKey.keylen, header->keyslot[ctx->cur_pwd].salt,
-							LUKS_SALTSIZE ,header->keyslot[ctx->cur_pwd].iterations, 
-							EVP_get_digestbyname(header->hash_spec),
-							usrKeyhashed.keylen,usrKeyhashed.key))){ 
-				warn_print("[WARNING] error hashing usrKey\n");
-				r=0;
-				goto end;
-			}
-	}
+	ctx->tctx.luks->pbkdf2_function(usrKey.key, usrKey.keylen, 
+					header->keyslot[ctx->cur_pwd].salt, LUKS_SALTSIZE, 
+					header->keyslot[ctx->cur_pwd].iterations,
+					usrKeyhashed.key, usrKeyhashed.keylen);
 
 	/* 2) generate iv_salt if needed for key decryption */
-	if(ctx->tctx.luks->iv_mode == ESSIV){ 
-	
-		if(!(iv = calloc(1,AES_BLOCK_SIZE))){
-			warn_print("[WARNING] calloc error\n");
-			r=0;
-			goto end;
-		}
-			
-		if(!(iv_salt = calloc(SHA256_DIGEST_LENGTH,sizeof(char)))){
-			warn_print("[WARNING] calloc error\n");
-			r=0;
-			goto end;
-		}
-	
+	if(ctx->tctx.luks->iv_mode == ESSIV){
 		if(!(set_essivkey(iv_salt, usrKeyhashed.key, 32))){
-			warn_print("[WARNING] iv_setkey error\n");
-			r=0;
-			goto end;
-		}
-	
-	}else if(ctx->tctx.luks->chain_mode == XTS){
-		if(!(iv = calloc(2,AES_BLOCK_SIZE))){
-			warn_print("[WARNING] calloc error\n");
+			errprint("Error generating iv_salt\n");
 			r=0;
 			goto end;
 		}
 	}
 
 	AFSectors = (int)(ceil((float)(ctx->tctx.luks->encrypted.keylen) / SECTOR_SIZE));
+	memset(iv,0,2*AES_BLOCK_SIZE);
 
 	/* iv generation for each sector */
 	for(sector=0; sector<AFSectors; sector++){
@@ -431,51 +150,21 @@ int luks_open_key(char *key, int keylen, SKUL_CTX *ctx){
 		buff[2] = (sec >> 8) & 0xff;
 		buff[3] = (sec ) & 0xff;
 
-		switch(ctx->tctx.luks->chain_mode){
-			case CBC:
-				switch(ctx->tctx.luks->iv_mode){
-					case ESSIV:
-					if(!gen_essiv(iv_salt, iv, &j, buff, AES_BLOCK_SIZE)){
-							warn_print("[WARNING] gen_essiv error\n");
-							r=0;
-							goto end;
-						}
-						if(j != AES_BLOCK_SIZE){
-							warn_print("[WARNING] gen_essiv len error\n");
-							r=0;
-							goto end;
-						}
-						break;
-					default:
-						iv=buff;
-				}
-				break;
-			case ECB:
-				iv=buff;
-				break;
-			case XTS:
-				snprintf(iv,AES_BLOCK_SIZE,"%s",buff);
-				break;
-			default:
-				iv=buff;
+		if(!ctx->tctx.luks->gen_iv(iv_salt, iv, &j, buff, AES_BLOCK_SIZE)){
+			errprint("Error generating iv\n");
+			r=0;
+			goto end;
 		}
 
 		/* 3) sector by sector decryption of masterkey */	
-		if(!decrypt(ctx->tctx.luks->chain_mode,usrKeyhashed.key, 
+		if(!ctx->tctx.luks->decrypt(usrKeyhashed.key,
 					ctx->tctx.luks->encrypted.key+(sector*SECTOR_SIZE),
-					SECTOR_SIZE,&outl,
-					split.key+(sector*SECTOR_SIZE),iv)){
-			warn_print("[WARNING] decrypt error\n");
+					SECTOR_SIZE, split.key+(sector*SECTOR_SIZE),iv)){
+			errprint("Error decrypting masterkey\n");
 			r=0;
 			goto end;
 		}
-		if(outl!=SECTOR_SIZE){
-			warn_print("\t[WARNING] DecryptUpdate length non corresponding\n\taspected:%d, obtained:%d\n", 
-					SECTOR_SIZE, outl);
-			r=0;
-			goto end;
 
-		}
 	}
 
 	/* 4) Merge the decrypted masterKey */
@@ -489,11 +178,12 @@ int luks_open_key(char *key, int keylen, SKUL_CTX *ctx){
 
 	/* 5) Test master key */
 	if(ctx->fast){
-		r=testkeydecryption(ctx->tctx.luks->chain_mode, master.key, ctx->tctx.luks->crypt_disk, 
+		r=testkeydecryption(ctx->tctx.luks, master.key, ctx->tctx.luks->crypt_disk, 
 				header->key_bytes);
 	}else{
-		r=testkeyhash(master.key, master.keylen, header->mk_digest_salt,
-				header->mk_digest_iter, header->mk_digest,header->hash_spec, ctx->tctx.luks->pbk_hash);
+		r=testkeyhash(ctx->tctx.luks, master.key, master.keylen, header->mk_digest_salt,
+				header->mk_digest_iter, header->mk_digest,header->hash_spec, 
+				ctx->tctx.luks->pbk_hash);
 	}
 
 end:
@@ -501,19 +191,6 @@ end:
 	free(usrKeyhashed.key);
 	free(master.key);
 	free(split.key);
-	free(buff);
-	switch(ctx->tctx.luks->chain_mode){
-		case CBC:
-			if(ctx->tctx.luks->iv_mode==ESSIV){
-				free(iv);
-				free(iv_salt);
-			}
-			break;
-		case ECB:
-			break;
-		case XTS:
-			free(iv);
-			break;
-	}
+
 	return r;
 }

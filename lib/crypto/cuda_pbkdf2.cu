@@ -1,7 +1,7 @@
 extern "C"{
-#include "cuda_pbkdf2.h"
 #include "../utils.h"
 }
+#include "cuda_pbkdf2.h"
 #include <openssl/hmac.h>
 #include <openssl/sha.h>
 #include <string.h>
@@ -173,36 +173,39 @@ void sha1_process( const SHA_DEV_CTX *ctx, SHA_DEV_CTX *data) {
 }
 
 __global__ void kernel_pbkdf2_sha1_32( gpu_inbuffer *inbuffer, 
-									gpu_outbuffer *outbuffer, int iterations) {
+									gpu_outbuffer *outbuffer, int *iterations, int num_pwds) {
     int i;
 	SHA_DEV_CTX temp_ctx, pmk_ctx;
     
     const int idx = blockIdx.x * blockDim.x + threadIdx.x;  
     
-    CPY_DEVCTX(inbuffer[idx].e1, temp_ctx);
-    CPY_DEVCTX(temp_ctx, pmk_ctx);
+	if(idx<num_pwds){
 
-    for( i = 0; i < iterations-1; i++ ){
-        sha1_process( &inbuffer[idx].ctx_ipad, &temp_ctx);
-        sha1_process( &inbuffer[idx].ctx_opad, &temp_ctx);
-        pmk_ctx.h0 ^= temp_ctx.h0; pmk_ctx.h1 ^= temp_ctx.h1;
-        pmk_ctx.h2 ^= temp_ctx.h2; pmk_ctx.h3 ^= temp_ctx.h3;
-        pmk_ctx.h4 ^= temp_ctx.h4;
-    }
-
-    CPY_DEVCTX(pmk_ctx, outbuffer[idx].pmk1);
-    CPY_DEVCTX(inbuffer[idx].e2, temp_ctx);
-    CPY_DEVCTX(temp_ctx, pmk_ctx);
-
-    for( i = 0; i < iterations-1; i++ ){
-        sha1_process( &inbuffer[idx].ctx_ipad, &temp_ctx);
-        sha1_process( &inbuffer[idx].ctx_opad, &temp_ctx);
-        pmk_ctx.h0 ^= temp_ctx.h0; pmk_ctx.h1 ^= temp_ctx.h1;
-        pmk_ctx.h2 ^= temp_ctx.h2; pmk_ctx.h3 ^= temp_ctx.h3;
-        pmk_ctx.h4 ^= temp_ctx.h4;
-    }
-
-    CPY_DEVCTX(pmk_ctx, outbuffer[idx].pmk2);
+		CPY_DEVCTX(inbuffer[idx].e1, temp_ctx);
+	    CPY_DEVCTX(temp_ctx, pmk_ctx);
+	
+	    for( i = 0; i < iterations[idx]-1; i++ ){
+	        sha1_process( &inbuffer[idx].ctx_ipad, &temp_ctx);
+	        sha1_process( &inbuffer[idx].ctx_opad, &temp_ctx);
+	        pmk_ctx.h0 ^= temp_ctx.h0; pmk_ctx.h1 ^= temp_ctx.h1;
+	        pmk_ctx.h2 ^= temp_ctx.h2; pmk_ctx.h3 ^= temp_ctx.h3;
+	        pmk_ctx.h4 ^= temp_ctx.h4;
+	    }
+	
+	    CPY_DEVCTX(pmk_ctx, outbuffer[idx].pmk1);
+	    CPY_DEVCTX(inbuffer[idx].e2, temp_ctx);
+	    CPY_DEVCTX(temp_ctx, pmk_ctx);
+	
+	    for( i = 0; i < iterations[idx]-1; i++ ){
+	        sha1_process( &inbuffer[idx].ctx_ipad, &temp_ctx);
+	        sha1_process( &inbuffer[idx].ctx_opad, &temp_ctx);
+	        pmk_ctx.h0 ^= temp_ctx.h0; pmk_ctx.h1 ^= temp_ctx.h1;
+	        pmk_ctx.h2 ^= temp_ctx.h2; pmk_ctx.h3 ^= temp_ctx.h3;
+	        pmk_ctx.h4 ^= temp_ctx.h4;
+	    }
+	
+	    CPY_DEVCTX(pmk_ctx, outbuffer[idx].pmk2);
+	}
 }
 
 
@@ -211,17 +214,18 @@ __global__ void kernel_pbkdf2_sha1_32( gpu_inbuffer *inbuffer,
  * - Outputs a list of 32byte derived keys
  * - num_pwds must be multiple of 64
  */
+extern "C"{
 int cuda_pbkdf2_hmac_sha1_32(unsigned char **pwdlst, int num_pwds, unsigned char *salt, 
 						  size_t saltlen, uint32_t iterations, uint8_t **key){
 
 
 	unsigned char pad[64], temp[32], *passwd;
-	int i=0,j=0,passwdlen;
+	int i=0, j=0, passwdlen,r=1, *d_iter, blks;
 	SHA_CTX ctx_pad;
     gpu_inbuffer *h_inbuffer, *d_inbuffer;
     gpu_outbuffer *h_outbuffer, *d_outbuffer;
 	cudaError_t cudaReturnValue;
-	
+
 	/* cuda allocation */
 	h_inbuffer = (gpu_inbuffer *)calloc(num_pwds, sizeof(gpu_inbuffer));
 	if(h_inbuffer == NULL){
@@ -232,6 +236,12 @@ int cuda_pbkdf2_hmac_sha1_32(unsigned char **pwdlst, int num_pwds, unsigned char
 	h_outbuffer = (gpu_outbuffer *)calloc(num_pwds, sizeof(gpu_outbuffer));
 	if(h_outbuffer == NULL){
 		errprint("Malloc error\n");
+		return 0;
+	}
+
+	cudaReturnValue = cudaMalloc((void **) &d_iter, (num_pwds) * sizeof(int));
+	if(cudaReturnValue != cudaSuccess){
+		errprint("Cuda error: %d - %s\n",cudaReturnValue, cudaGetErrorString(cudaReturnValue));
 		return 0;
 	}
 
@@ -248,6 +258,15 @@ int cuda_pbkdf2_hmac_sha1_32(unsigned char **pwdlst, int num_pwds, unsigned char
 	}
 
 	for(i = 0; i < num_pwds; i++){
+
+		cudaReturnValue = cudaMemcpy(&d_iter[i], &iterations, sizeof(int), cudaMemcpyHostToDevice);
+		if(cudaReturnValue != cudaSuccess){
+			errprint("Cuda error: %d - %s\n",cudaReturnValue, cudaGetErrorString(cudaReturnValue));
+
+			r=0;
+			goto end;
+		}
+
 		passwd = pwdlst[i];
 		passwdlen = strlen((const char *)passwd);
 
@@ -288,48 +307,56 @@ int cuda_pbkdf2_hmac_sha1_32(unsigned char **pwdlst, int num_pwds, unsigned char
 	cudaReturnValue = cudaMemcpy(d_inbuffer, h_inbuffer, num_pwds * sizeof(gpu_inbuffer), cudaMemcpyHostToDevice);
 	if(cudaReturnValue != cudaSuccess){
 		errprint("Cuda error: %d - %s\n",cudaReturnValue, cudaGetErrorString(cudaReturnValue));
-		return 0;
+		r=0;
+		goto end;
 	}
 
+	blks = ceil((num_pwds/64));
 
 	/* call the cuda kernel */
-	kernel_pbkdf2_sha1_32<<<num_pwds/64, 64>>>(d_inbuffer, d_outbuffer, iterations);
+	kernel_pbkdf2_sha1_32<<<blks, 64>>>(d_inbuffer, d_outbuffer, d_iter, num_pwds);
 	cudaDeviceSynchronize();
 
 	if((cudaReturnValue = cudaGetLastError()) != cudaSuccess){
 		errprint("Cuda error: %d - %s\n",cudaReturnValue, cudaGetErrorString(cudaReturnValue));
-        return 0;
+		r=0;
+		goto end;
     }
 
 	cudaReturnValue = cudaMemcpy(h_outbuffer, d_outbuffer, num_pwds * sizeof(gpu_outbuffer), cudaMemcpyDeviceToHost);
 	if(cudaReturnValue != cudaSuccess){
 		errprint("Cuda error: %d - %s\n",cudaReturnValue, cudaGetErrorString(cudaReturnValue));
-		return 0;
+		r=0;
+		goto end;
 	}
 	
 	for(i=0;i<num_pwds;i++){
-	    PUT_BE(h_outbuffer[0].pmk1.h0, temp,  0); PUT_BE(h_outbuffer[0].pmk1.h1, temp,  4);
-	    PUT_BE(h_outbuffer[0].pmk1.h2, temp,  8); PUT_BE(h_outbuffer[0].pmk1.h3, temp, 12);
-	    PUT_BE(h_outbuffer[0].pmk1.h4, temp, 16); PUT_BE(h_outbuffer[0].pmk2.h0, temp, 20);
-	    PUT_BE(h_outbuffer[0].pmk2.h1, temp, 24); PUT_BE(h_outbuffer[0].pmk2.h2, temp, 28);
+	    PUT_BE(h_outbuffer[i].pmk1.h0, temp,  0); PUT_BE(h_outbuffer[i].pmk1.h1, temp,  4);
+	    PUT_BE(h_outbuffer[i].pmk1.h2, temp,  8); PUT_BE(h_outbuffer[i].pmk1.h3, temp, 12);
+	    PUT_BE(h_outbuffer[i].pmk1.h4, temp, 16); PUT_BE(h_outbuffer[i].pmk2.h0, temp, 20);
+	    PUT_BE(h_outbuffer[i].pmk2.h1, temp, 24); PUT_BE(h_outbuffer[i].pmk2.h2, temp, 28);
 		memcpy(key[i], temp, 32);
 	}
 
+end:
 	cudaReturnValue = cudaFree(d_inbuffer);
 	if(cudaReturnValue != cudaSuccess){
 		errprint("Cuda error: %d - %s\n",cudaReturnValue, cudaGetErrorString(cudaReturnValue));
-		return 0;
+		r=0;
+		goto end;
 	}
 
 	cudaReturnValue = cudaFree(d_outbuffer);
 	if(cudaReturnValue != cudaSuccess){
 		errprint("Cuda error: %d - %s\n",cudaReturnValue, cudaGetErrorString(cudaReturnValue));
-		return 0;
+		r=0;
+		goto end;
 	}
 
 	free(h_outbuffer);
 	free(h_inbuffer);
 
-	return 1;
+	return r;
 
+}
 }

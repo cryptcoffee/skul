@@ -44,6 +44,8 @@ typedef struct usr_preferences{
 	int SEL_MOD;
 	int PRG_BAR;
 	int ENG_SEL;
+	int CUD_BLK;
+	int CUD_THR;
 }usrp;
 
 int read_cfg(usrp *UP, int threads, char *cfg_path, int mode, int fast, engine_t *engine);

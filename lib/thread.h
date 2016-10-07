@@ -72,11 +72,11 @@ int test_control(int max_l, int count, pthread_t *threads, int num_th,
 		int *progress, char *win_pwd, int cur_pwd, int prg_bar);
 
 void *th_list(void *param);
-
 void *test_list(void *param);
-
 void *th_force(void *param);
-
 void *test_force(void *param);
+#if CUDA_ENGINE
+void *cuda_th_list(void *param);
+#endif
 
 #endif

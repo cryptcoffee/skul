@@ -30,5 +30,6 @@
 int bruteforce(int len, char *set, int set_len, SKUL_CTX *ctx);
 int pwlist(SKUL_CTX *ctx);
 char *init_set(int *set_len, int id_set);
+int cuda_pwlist(SKUL_CTX *ctx);
 
 #endif

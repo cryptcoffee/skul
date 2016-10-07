@@ -157,7 +157,7 @@ void *th_list(void *param){
 		
 		*(d->progress)= *(d->progress)+1;
 		len = strlen(d->list[j]);
-		found = luks_open_key(d->list[j], len, &(d->ctx));
+		found = d->ctx.open_key(d->list[j], len, &(d->ctx));
 
 		if(found){
 
@@ -179,6 +179,52 @@ end:
 	}
 	pthread_exit(NULL);
 }
+
+#if CUDA_ENGINE
+void *cuda_th_list(void *param){
+
+	thlist_data *d = (thlist_data *)param;
+	int j=0, found=0, round, numkeys, last=0, win_pos;
+	*(d->progress)=0;
+	
+	round = (d->ctx.UP.CUD_BLK) * (d->ctx.UP.CUD_THR);
+
+	while(1){	
+
+		if(round >= (d->num - *(d->progress))){
+			numkeys = d->num - *(d->progress);
+			last=1;
+		}else{
+			numkeys = round;
+		}
+
+		found = d->ctx.cuda_open_key(d->list+(*d->progress), numkeys, &(d->ctx), 
+				&win_pos, d->progress);
+		j++;
+		if(found){
+
+			/* entering mutex section */
+			pthread_mutex_lock(&condition_mutex);
+			pthread_cond_signal(&condition_cond);
+			
+			memset(d->win_pwd,0,d->max_l);
+			sprintf(d->win_pwd,"%s",d->list[win_pos]);
+			
+			/* exiting mutex section */
+			pthread_mutex_unlock(&condition_mutex);
+			break;
+		}
+		if(last)
+			break;
+	}
+
+	for(j=0;j<d->num;j++){
+		free(d->list[j]);
+	}
+	free(d->list);
+	pthread_exit(NULL);
+}
+#endif
 
 int th_control(int max_l, int count, pthread_t *threads, int num_th, 
 		int *progress, char *win_pwd, int cur_pwd, int prg_bar){
@@ -228,7 +274,7 @@ int test_control(int max_l, int count, pthread_t *threads, int num_th,
 	while(1){
 		if(prg_bar){
 			fflush(stdout);
-			printf("Tried: %d \t %3d\r",tot_prog,perc);
+			printf("\rTried: %d \t %3d%%",tot_prog,perc);
 			fflush(stdout);
 			perc = tot_prog*100/count;
 		}

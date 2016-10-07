@@ -30,20 +30,14 @@
 #include "../../src/skul.h"
 #include <openssl/evp.h>
 
-#define ECB 1
-#define CBC 2
-#define XTS 3
-#define PLAIN 32
-#define PLAIN64 64
-#define ESSIV 256
-
 #define SHA_ONE 1
 #define SHA_TWO_FIVE_SIX 2
 #define SHA_FIVE_ONE_TWO 3
 #define RIPEMD 4
 
-int check_mode(unsigned char *cipher_mode, int *iv_mode, int *chain_mode);
+int check_mode(LUKS_CTX *ctx, unsigned char *cipher_mode, int *iv_mode, int *chain_mode);
 int luks_open_key(char *key, int keylen, SKUL_CTX *ctx);
+int luks_cuda_open_key(char **keys, int numkeys, SKUL_CTX *ctx, int *win_pos, int *progress);
 
 #endif
 

@@ -125,7 +125,7 @@ int cpu_engine(SKUL_CTX *ctx){
 #if CUDA_ENGINE
 int cuda_engine(SKUL_CTX *ctx){
 
-	int res=0;
+	int res=0,j;
 	struct timeval t0,t1;
 	unsigned long sec;
 

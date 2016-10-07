@@ -3,13 +3,23 @@
 #include <string.h>
 #include "../utils.h"
 #include "luks_decrypt.h"
+#include "../crypto/fastpbkdf2.h"
+#include "../crypto/cuda_pbkdf2.h"
 #include "../../src/skul.h"
 #include "luks.h"
 
 int interface_selection(pheader *header,int *slot,int *slot_order, int *tot, 
 		int key_sel);
-int initfs(pheader *header, int *iv_mode, int *chain_mode, char *crypt_disk, 
+int initfs(LUKS_CTX *ctx, int *iv_mode, int *chain_mode, char *crypt_disk, 
 		char *path, lkey_t *encrypted, int *slot);
+
+void wrapper_pbkdf2_hmac_ripemd160(char *key, int keylen, char *salt, int saltsize, 
+		int iterations, char* digest, int digestsize){
+
+	PKCS5_PBKDF2_HMAC(key, keylen, salt, saltsize,
+				iterations, EVP_get_digestbyname("ripemd160"), digestsize, digest);
+
+}
 
 int alloc_header(pheader *header){
 	
@@ -112,7 +122,7 @@ int LUKS_pheadercpy(pheader *dst, pheader *src){
 
 
 int LUKS_init(LUKS_CTX *ctx, int pwd_default, int *num_pwds, int *pwd_ord, char *path, 
-		usrp UP, int *attack_mode){
+		usrp UP, int *attack_mode, engine_t engine){
 
 	int c,mod,i;
 
@@ -127,7 +137,7 @@ int LUKS_init(LUKS_CTX *ctx, int pwd_default, int *num_pwds, int *pwd_ord, char 
 	}
 
 
-	if(!initfs(&(ctx->header), &(ctx->iv_mode), &(ctx->chain_mode), 
+	if(!initfs(ctx, &(ctx->iv_mode), &(ctx->chain_mode), 
 				ctx->crypt_disk, path, &(ctx->encrypted), ctx->slot)){
 		return 0;
 	}
@@ -171,19 +181,41 @@ int LUKS_init(LUKS_CTX *ctx, int pwd_default, int *num_pwds, int *pwd_ord, char 
 
 	*attack_mode=mod;
 
-	/* set the correct pbk_hash */
+	/* set the correct pbk_hash and related functions */
 	if(strcmp(ctx->header.hash_spec, "sha1")==0){
 		ctx->pbk_hash=SHA_ONE;
+		ctx->pbkdf2_function = fastpbkdf2_hmac_sha1;
+#if CUDA_ENGINE
+		ctx->cuda_pbkdf2_function = cuda_pbkdf2_hmac_sha1_32;
+#endif
 	}else if(strcmp(ctx->header.hash_spec, "sha256")==0){
 		ctx->pbk_hash=SHA_TWO_FIVE_SIX;
+		ctx->pbkdf2_function = fastpbkdf2_hmac_sha256;
+#if CUDA_ENGINE
+		ctx->cuda_pbkdf2_function = NULL;
+#endif
 	}else if(strcmp(ctx->header.hash_spec, "sha512")==0){
 		ctx->pbk_hash=SHA_FIVE_ONE_TWO;
+		ctx->pbkdf2_function = fastpbkdf2_hmac_sha512;
+#if CUDA_ENGINE
+		ctx->cuda_pbkdf2_function = NULL;
+#endif
 	}else if(strcmp(ctx->header.hash_spec, "ripemd160")==0){
 		ctx->pbk_hash=RIPEMD;
+		ctx->pbkdf2_function = wrapper_pbkdf2_hmac_ripemd160;
+#if CUDA_ENGINE
+		ctx->cuda_pbkdf2_function = NULL;
+#endif
 	}else{
 		errprint("Unsupported hash function\n");
 		return 0;
 	}
+
+	if((engine!=CPU) && (ctx->pbk_hash!=SHA_ONE)){
+		errprint("Hash function still not supported on CUDA!\n");
+		return 0;
+	}
+
 
 	return 1;
 
@@ -207,6 +239,10 @@ int LUKS_CTXcpy(LUKS_CTX *dst, LUKS_CTX *src){
 	dst->iv_mode = src->iv_mode;
 	dst->chain_mode = src->chain_mode;
 	dst->pbk_hash = src->pbk_hash;
+	dst->pbkdf2_function = src->pbkdf2_function;
+	dst->cuda_pbkdf2_function = src->cuda_pbkdf2_function;
+	dst->decrypt = src->decrypt;
+	dst->gen_iv = src->gen_iv;
 
 	for(i=0;i<8;i++){
 		dst->slot[i] = src->slot[i];
@@ -356,7 +392,7 @@ void print_header(pheader *header){
 
 void print_keyslot(pheader *header,int slot){
 
-/*	int j;*/
+	int j;
 
 	printf("KEYSLOT %d: ",slot);
 	if(header->keyslot[slot].active == LUKS_KEY_DISABLED){
@@ -414,10 +450,14 @@ int read_disk(unsigned char *dst, size_t size, char *path, size_t offset){
 	return 1;
 }
 
-int initfs(pheader *header, int *iv_mode, int *chain_mode, char *crypt_disk, 
-		char *path, lkey_t *encrypted, int *slot){
+int initfs(LUKS_CTX *ctx, int *iv_mode, int *chain_mode, char *crypt_disk, 
+	char *path, lkey_t *encrypted, int *slot){
 
 	const unsigned char LUKS_MAGIC[6] = {'L','U','K','S',0xBA,0xBE};
+	pheader *header;
+
+	header = &(ctx->header);
+
 	/* header initializations */
 	if(!(alloc_header(header))){
 		errprint("error in header allocation!\n");
@@ -439,7 +479,7 @@ int initfs(pheader *header, int *iv_mode, int *chain_mode, char *crypt_disk,
 	debug_print("LUKS MAGIC ok\n");
 	
 	/* check cipher mode */
-	if(!check_mode(header->cipher_mode, iv_mode, chain_mode)){
+	if(!check_mode(ctx, header->cipher_mode, iv_mode, chain_mode)){
 		errprint("unsupported cipher_mode!\n");
 		exit(EXIT_FAILURE);
 	}

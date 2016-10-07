@@ -7,3 +7,7 @@ skul_dbg
 tests
 args_test
 args_test.c
+skulcu
+conf/pwlist_cuda
+conf/pwlist_cuda_medium
+conf/pwlist_micro

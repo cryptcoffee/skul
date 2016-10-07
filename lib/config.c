@@ -36,7 +36,7 @@
 int read_cfg(usrp *UP, int threads, char *cfg_path, int mode, int fast, engine_t *engine){
 
 	FILE *conf;
-	char *line,par[10];
+	char *line,par[12];
 	int count,i,val,n;
 
 	if(cfg_path){
@@ -67,7 +67,7 @@ int read_cfg(usrp *UP, int threads, char *cfg_path, int mode, int fast, engine_t
 	count = 0;
 	while((line = readline(conf,&n))){
 		count++;
-		if((line[0]!='#')&&(line[0]!='\0')&&(n<=10)){
+		if((line[0]!='#')&&(line[0]!='\0')&&(n<=12)){
 			if((i=sscanf(line,"%s %d",par, &val))<2){
 				errprint("skul.cfg error: value not set on line %d\n",count);
 				return 0;
@@ -91,6 +91,10 @@ int read_cfg(usrp *UP, int threads, char *cfg_path, int mode, int fast, engine_t
 				UP->PRG_BAR=val;
 			}else if(memcmp(par,"ENG_SEL",7)==0){
 				UP->ENG_SEL=val;
+			}else if(memcmp(par,"CUD_BLK",7)==0){
+				UP->CUD_BLK=val;
+			}else if(memcmp(par,"CUD_THR",7)==0){
+				UP->CUD_THR=val;
 			}else{
 				errprint("skul.cfg error: invalid line %d\n",count);
 				fclose(conf);

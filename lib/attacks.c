@@ -396,11 +396,10 @@ int pwlist(SKUL_CTX *ctx){
 }
 
 #if CUDA_ENGINE
-
 int cuda_pwlist(SKUL_CTX *ctx){
 
 	char **list, c, *win_pwd;
-	int i=0,j, count=0,jforth,max_l=0,cur_l,lastj, *progress, tot=0, found=1;
+	int i=0, count=0,max_l=0,cur_l, *progress, tot=0, found=1;
 	FILE *f;
 	thlist_data *arg;
 	pthread_t *threads;
@@ -442,19 +441,19 @@ int cuda_pwlist(SKUL_CTX *ctx){
 
 	printf("Password list: %d passwords\n", count);
 
-	if((win_pwd = calloc(max_l,sizeof(char)))==NULL){
+	if((win_pwd = calloc(max_l, sizeof(char)))==NULL){
 		errprint("malloc error!\n");
 		return 0;
 	}
-	if((arg = calloc(ctx->UP.NUM_THR, sizeof(thlist_data)))==NULL){
+	if((arg = calloc(1, sizeof(thlist_data)))==NULL){
 		errprint("malloc error!\n");
 		return 0;
 	}
-	if((threads = calloc(ctx->UP.NUM_THR, sizeof(pthread_t)))==NULL){
+	if((threads = calloc(1, sizeof(pthread_t)))==NULL){
 		errprint("malloc error!\n");
 		return 0;
 	}
-	if((progress = calloc(ctx->UP.NUM_THR, sizeof(int)))==NULL){
+	if((progress = calloc(1, sizeof(int)))==NULL){
 		errprint("malloc error!\n");
 		return 0;
 	}
@@ -464,74 +463,54 @@ int cuda_pwlist(SKUL_CTX *ctx){
 	pthread_attr_setdetachstate(&attr,PTHREAD_CREATE_JOINABLE);
 
 	/* arguments initialization */
-	jforth = count/ctx->UP.NUM_THR;
-	for(j=0;j<ctx->UP.NUM_THR-1;j++){
-		if(!thlist_datainit(&(arg[j]), ctx, j, list+(j*jforth), jforth,
-					max_l, &progress[j],win_pwd)){
-			errprint("thlist_datainit error!\n");
-			return 0;
-		}
+	if(!thlist_datainit(arg, ctx, 0, list, count,
+				max_l, progress, win_pwd)){
+		errprint("thlist_datainit error!\n");
+		return 0;
 	}
-#ifdef TESTING
+
+/*#ifdef TESTING
 	lst = test_list;
 	control = test_control;
 #else
 	lst = th_list;
 	control = th_control;
-#endif
+#endif*/
+	lst = cuda_th_list;
+	control = th_control;
 
 	/* START TIME */
 	gettimeofday(&t0,NULL);
 
 	/* threads creation */
-	for(j=0;j<ctx->UP.NUM_THR-1;j++){
-		if( pthread_create(&threads[j],&attr, lst, (void *)&arg[j]) ){
-			errprint("pthread_create error!\n");
-			return 0;
-		}
-	}
-
-	/* 
-	 * last thread creation (we need to do this apart because of the
-	 * approssimation of integer division)
-	 */
-	lastj = count - (jforth *(ctx->UP.NUM_THR-1));
-	if(!thlist_datainit(&(arg[j]), ctx, j, list+(j*jforth), lastj,
-				max_l, &progress[j],win_pwd)){
-		errprint("thlistdata_init error!\n");
+	if( pthread_create(&threads[0], &attr, lst, (void *)&arg[0]) ){
+		errprint("pthread_create error!\n");
 		return 0;
 	}
-	if( pthread_create(&threads[ctx->UP.NUM_THR-1],&attr, lst, (void *)&arg[j]) ){
-			errprint("pthread_create error!\n");
-			return 0;
-		}
 
 	for(i=0;i<count;i++){
 		free(list[i]);
 	}
 	free(list);
 
-	if(!control(max_l,count, threads, ctx->UP.NUM_THR, progress, win_pwd,
+	if(!control(max_l, count, threads, 1, progress, win_pwd,
 				ctx->cur_pwd, ctx->UP.PRG_BAR)){
 		printf("Password not found\n");
 		found = 0;
 	}
-#ifdef TEST
 
-	for(j=0;j<ctx->UP.NUM_THR;j++){
-		pthread_join(threads[j],NULL);
-	}
+/*#ifdef TEST
 
-#endif
+	pthread_join(threads[0],NULL);
+
+#endif*/
 
 	/* END TIME */
 	gettimeofday(&t1,NULL);
 	sec=t1.tv_sec-t0.tv_sec;
 	tot=0;
 	if(!ctx->UP.PRG_BAR){
-		for(j=0;j<ctx->UP.NUM_THR;j++){
-			tot+=progress[j];
-		}
+		tot+=progress[0];
 		printf("Tried: %d passwords -  ",tot);
 		fflush(stdout);
 	}
