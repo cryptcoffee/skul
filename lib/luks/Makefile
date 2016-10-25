@@ -20,23 +20,27 @@
 #    You should have received a copy of the GNU General Public License
 #    along with Skul.  If not, see <http://www.gnu.org/licenses/>.
 
--include conf.mk
+-include ../../conf.mk
 
-skul: $(SRC)skul.c $(OBJS)
-	cd $(LIB); make cpu
-	cd $(CRY); make crypto
-	cd $(LUK); make luks_cpu
-	$(COMP) -o $@ $(SRC)skul.c $(DIR)luks.o $(DIR)random.o $(DIR)af.o $(DIR)utils.o $(DIR)luks_decrypt.o $(DIR)config.o $(DIR)thread.o $(DIR)attacks.o $(DIR)fastpbkdf2.o $(DIR)engine.o $(DIR)_luks_decrypt.o $(DLO)
+all: luks_cpu luks_w_cuda
 
-skulcu: $(SRC)skul.c $(CUOBJS)
-	cd $(LIB); make cuda
-	cd $(CRY); make cuda_crypto
-	cd $(LUK); make luks_w_cuda
-	$(NVCC) -o $@ $(SRC)skul.c $(DIR)luks_cuda.o $(DIR)random.o $(DIR)af.o $(DIR)utils.o $(DIR)luks_decrypt.o $(DIR)config.o $(DIR)thread_cuda.o $(DIR)attacks_cuda.o $(DIR)fastpbkdf2.o $(DIR)engine_cuda.o $(DIR)cuda_pbkdf2.o $(DIR)luks_cuda_decrypt.o $(DIR)_luks_decrypt.o $(CUOPT)
+luks_cpu: luks_decrypt.o _luks_decrypt.o luks.o
 
+luks_w_cuda: luks_cuda_decrypt.o luks_cuda.o _luks_decrypt.o luks_decrypt.o 
 
-clean:
-	rm -f $(DIR)*.o
-	rm -f skul
-	rm -f skulcu
+luks_decrypt.o: luks_decrypt.c 
+	$(COMP) -o $(DIR)$@ -c luks_decrypt.c $(DLO)
+
+_luks_decrypt.o: _luks_decrypt.c
+	$(COMP) -o $(DIR)$@ -c _luks_decrypt.c $(DLO)
+
+luks.o: luks.c
+	$(COMP) -o $(DIR)$@ -c luks.c
+
+luks_cuda.o: luks.c  
+	$(NVCC) -o $(DIR)$@ -c luks.c $(CUOPT)
+
+luks_cuda_decrypt.o: luks_cuda_decrypt.c
+	$(NVCC) -o $(DIR)$@ -c luks_cuda_decrypt.c $(CUOPT)
+
 

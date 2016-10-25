@@ -63,7 +63,7 @@ typedef struct luks_ctx{
 	/* functions */
 	void (*pbkdf2_function)(const uint8_t *pw, size_t npw, const uint8_t *salt, size_t nsalt,
 			uint32_t iterations, uint8_t *out, size_t nout);
-	int (*cuda_pbkdf2_function)(unsigned char **pwdlst, int num_pwds, unsigned char *salt, 
+	int (*cuda_pbkdf2_function)(unsigned char **pwdlst, size_t num_pwds, unsigned char *salt, 
 			size_t saltlen, uint32_t iterations, uint8_t **key);
 	int (*decrypt)(unsigned char *key, unsigned char *encrypted, int encrypted_length,
 		unsigned char *decrypted, unsigned char *iv);
@@ -78,7 +78,7 @@ int LUKS_init(LUKS_CTX *ctx, int pwd_default, int *num_pwds, int *pwd_ord, char 
 		usrp UP, int *attack_mode, engine_t engine);
 int LUKS_CTXcpy(LUKS_CTX *dest, LUKS_CTX *surc);
 void LUKS_clean(LUKS_CTX *ctx);
-void wrapper_pbkdf2_hmac_ripemd160(char *key, int keylen, char *salt, int saltsize, 
-		int iterations, char* digest, int digestsize);
+void wrapper_pbkdf2_hmac_ripemd160(const uint8_t *key, size_t keylen, const uint8_t *salt, 
+		size_t saltsize, uint32_t iterations, uint8_t* digest, size_t digestsize);
 
 #endif

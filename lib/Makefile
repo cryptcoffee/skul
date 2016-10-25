@@ -20,23 +20,32 @@
 #    You should have received a copy of the GNU General Public License
 #    along with Skul.  If not, see <http://www.gnu.org/licenses/>.
 
--include conf.mk
+-include ../conf.mk
 
-skul: $(SRC)skul.c $(OBJS)
-	cd $(LIB); make cpu
-	cd $(CRY); make crypto
-	cd $(LUK); make luks_cpu
-	$(COMP) -o $@ $(SRC)skul.c $(DIR)luks.o $(DIR)random.o $(DIR)af.o $(DIR)utils.o $(DIR)luks_decrypt.o $(DIR)config.o $(DIR)thread.o $(DIR)attacks.o $(DIR)fastpbkdf2.o $(DIR)engine.o $(DIR)_luks_decrypt.o $(DLO)
+cpu:  utils.o config.o thread.o attacks.o engine.o
+cuda: utils.o config.o thread_cuda.o attacks_cuda.o engine_cuda.o
 
-skulcu: $(SRC)skul.c $(CUOBJS)
-	cd $(LIB); make cuda
-	cd $(CRY); make cuda_crypto
-	cd $(LUK); make luks_w_cuda
-	$(NVCC) -o $@ $(SRC)skul.c $(DIR)luks_cuda.o $(DIR)random.o $(DIR)af.o $(DIR)utils.o $(DIR)luks_decrypt.o $(DIR)config.o $(DIR)thread_cuda.o $(DIR)attacks_cuda.o $(DIR)fastpbkdf2.o $(DIR)engine_cuda.o $(DIR)cuda_pbkdf2.o $(DIR)luks_cuda_decrypt.o $(DIR)_luks_decrypt.o $(CUOPT)
+utils.o: utils.c
+	$(COMP) -o $(DIR)$@ -c utils.c
 
+config.o: config.c
+	$(COMP) -o $(DIR)$@ -c config.c $(DLO)
 
-clean:
-	rm -f $(DIR)*.o
-	rm -f skul
-	rm -f skulcu
+thread.o: thread.c
+	$(COMP) -o $(DIR)$@ -c thread.c $(DLO)
+
+thread_cuda.o: thread.c
+	$(COMP) -o $(DIR)$@ -c thread.c $(DLO) -DCUDA_ENGINE=1
+
+attacks.o: attacks.c
+	$(COMP) -lm -o $(DIR)$@ -c attacks.c
+
+attacks_cuda.o: attacks.c
+	$(COMP) -lm -o $(DIR)$@ -c attacks.c -DCUDA_ENGINE=1
+
+engine.o: engine.c
+	$(COMP) -o $(DIR)$@ -c engine.c
+
+engine_cuda.o: engine.c
+	$(COMP) -o $(DIR)$@ -c engine.c -DCUDA_ENGINE=1
 

@@ -54,8 +54,8 @@ int luks_cuda_open_key(unsigned char **keys, int numkeys, SKUL_CTX *ctx,
 	lkey_t master, split;
 	uint8_t **usrKeyshashed;
 	pheader *header;
-	struct timeval t0,t1;
-	unsigned long seconds;
+/*	struct timeval t0,t1;
+	unsigned long seconds;*/
 
 	header = &(ctx->tctx.luks->header);
 

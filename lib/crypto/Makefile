@@ -20,23 +20,21 @@
 #    You should have received a copy of the GNU General Public License
 #    along with Skul.  If not, see <http://www.gnu.org/licenses/>.
 
--include conf.mk
+-include ../../conf.mk
 
-skul: $(SRC)skul.c $(OBJS)
-	cd $(LIB); make cpu
-	cd $(CRY); make crypto
-	cd $(LUK); make luks_cpu
-	$(COMP) -o $@ $(SRC)skul.c $(DIR)luks.o $(DIR)random.o $(DIR)af.o $(DIR)utils.o $(DIR)luks_decrypt.o $(DIR)config.o $(DIR)thread.o $(DIR)attacks.o $(DIR)fastpbkdf2.o $(DIR)engine.o $(DIR)_luks_decrypt.o $(DLO)
+crypto: random.o af.o fastpbkdf2.o
 
-skulcu: $(SRC)skul.c $(CUOBJS)
-	cd $(LIB); make cuda
-	cd $(CRY); make cuda_crypto
-	cd $(LUK); make luks_w_cuda
-	$(NVCC) -o $@ $(SRC)skul.c $(DIR)luks_cuda.o $(DIR)random.o $(DIR)af.o $(DIR)utils.o $(DIR)luks_decrypt.o $(DIR)config.o $(DIR)thread_cuda.o $(DIR)attacks_cuda.o $(DIR)fastpbkdf2.o $(DIR)engine_cuda.o $(DIR)cuda_pbkdf2.o $(DIR)luks_cuda_decrypt.o $(DIR)_luks_decrypt.o $(CUOPT)
+cuda_crypto: random.o af.o fastpbkdf2.o cuda_pbkdf2.o
 
+random.o: random.c
+	$(COMP) -c random.c -o $(DIR)$@ 
 
-clean:
-	rm -f $(DIR)*.o
-	rm -f skul
-	rm -f skulcu
+af.o: af.c  
+	$(COMP) -o $(DIR)$@ -c af.c $(DLO)
+
+fastpbkdf2.o: fastpbkdf2.c
+	$(COMP) -o $(DIR)$@ -c fastpbkdf2.c
+
+cuda_pbkdf2.o: cuda_pbkdf2.cu 
+	$(NVCC) $(CUOPT) -o $(DIR)$@ -c cuda_pbkdf2.cu 
 

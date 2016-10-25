@@ -4,7 +4,9 @@
 #include "../utils.h"
 #include "luks_decrypt.h"
 #include "../crypto/fastpbkdf2.h"
-#include "../crypto/cuda_pbkdf2.h"
+#if CUDA_ENGINE == 1
+	#include "../crypto/cuda_pbkdf2.h"
+#endif
 #include "../../src/skul.h"
 #include "luks.h"
 
@@ -13,12 +15,11 @@ int interface_selection(pheader *header,int *slot,int *slot_order, int *tot,
 int initfs(LUKS_CTX *ctx, int *iv_mode, int *chain_mode, char *crypt_disk, 
 		char *path, lkey_t *encrypted, int *slot);
 
-void wrapper_pbkdf2_hmac_ripemd160(char *key, int keylen, char *salt, int saltsize, 
-		int iterations, char* digest, int digestsize){
+void wrapper_pbkdf2_hmac_ripemd160(const uint8_t *key, size_t keylen, const uint8_t *salt, 
+		size_t saltsize, uint32_t iterations, uint8_t* digest, size_t digestsize){
 
 	PKCS5_PBKDF2_HMAC(key, keylen, salt, saltsize,
 				iterations, EVP_get_digestbyname("ripemd160"), digestsize, digest);
-
 }
 
 int alloc_header(pheader *header){
@@ -392,7 +393,7 @@ void print_header(pheader *header){
 
 void print_keyslot(pheader *header,int slot){
 
-	int j;
+	/*int j;*/
 
 	printf("KEYSLOT %d: ",slot);
 	if(header->keyslot[slot].active == LUKS_KEY_DISABLED){

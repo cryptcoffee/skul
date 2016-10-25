@@ -1,7 +1,7 @@
 extern "C"{
 #include "../utils.h"
-}
 #include "cuda_pbkdf2.h"
+}
 #include <openssl/hmac.h>
 #include <openssl/sha.h>
 #include <string.h>
@@ -215,7 +215,7 @@ __global__ void kernel_pbkdf2_sha1_32( gpu_inbuffer *inbuffer,
  * - num_pwds must be multiple of 64
  */
 extern "C"{
-int cuda_pbkdf2_hmac_sha1_32(unsigned char **pwdlst, int num_pwds, unsigned char *salt, 
+int cuda_pbkdf2_hmac_sha1_32(unsigned char **pwdlst, size_t num_pwds, unsigned char *salt, 
 						  size_t saltlen, uint32_t iterations, uint8_t **key){
 
 
