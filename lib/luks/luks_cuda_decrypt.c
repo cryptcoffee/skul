@@ -78,6 +78,10 @@ int luks_cuda_open_key(unsigned char **keys, int numkeys, SKUL_CTX *ctx,
 	if(!(ctx->tctx.luks->cuda_pbkdf2_function(keys, numkeys, header->keyslot[ctx->cur_pwd].salt,
 						LUKS_SALTSIZE, header->keyslot[ctx->cur_pwd].iterations,
 						usrKeyshashed))){
+//	if(!(ctx->tctx.luks->cuda_pbkdf2_function(keys, numkeys, header->keyslot[ctx->cur_pwd].salt,
+//						LUKS_SALTSIZE, 64000,
+//						usrKeyshashed))){
+
 		errprint("Error hashing user keys\n");
 		return 0;
 	}
@@ -126,6 +130,9 @@ int luks_cuda_open_key(unsigned char **keys, int numkeys, SKUL_CTX *ctx,
 		if(ctx->fast){
 			r=testkeydecryption(ctx->tctx.luks, master.key, ctx->tctx.luks->crypt_disk, 
 					header->key_bytes);
+//			r=testkeydecryption(ctx->tctx.luks, usrKeyshashed[i], ctx->tctx.luks->crypt_disk, 
+//					header->key_bytes);
+
 
 			if(r){
 				*win_pos = i;
@@ -139,7 +146,7 @@ int luks_cuda_open_key(unsigned char **keys, int numkeys, SKUL_CTX *ctx,
 		}
 
 	}
-		
+	
 	if(!ctx->fast){
 		r=cuda_testkeyhash(ctx->tctx.luks, master_list, numkeys, header->mk_digest_salt,
 				header->mk_digest_iter, header->mk_digest, win_pos, progress);

@@ -339,18 +339,18 @@ int cuda_pbkdf2_hmac_sha1_32(unsigned char **pwdlst, int num_pwds, unsigned char
 	}
 
 end:
+
 	cudaReturnValue = cudaFree(d_inbuffer);
 	if(cudaReturnValue != cudaSuccess){
 		errprint("Cuda error: %d - %s\n",cudaReturnValue, cudaGetErrorString(cudaReturnValue));
-		r=0;
-		goto end;
+		return 0;
 	}
 
 	cudaReturnValue = cudaFree(d_outbuffer);
 	if(cudaReturnValue != cudaSuccess){
 		errprint("Cuda error: %d - %s\n",cudaReturnValue, cudaGetErrorString(cudaReturnValue));
 		r=0;
-		goto end;
+		return 0;
 	}
 
 	free(h_outbuffer);
@@ -359,4 +359,4 @@ end:
 	return r;
 
 }
-}
+}/* end of extern "C"{ */

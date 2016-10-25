@@ -28,8 +28,8 @@ DBG = -g -Xlinker -Map=output.map
 CC = gcc 
 NVCC = nvcc
 #OPT = -Wall -pedantic -ansi -Wno-pointer-sign -D _DEFAULT_SOURCE -D_XOPEN_SOURCE=700 -D_REENTRANT -DPURIFY -O3 _BSD_SOURCE 
-OPT = #-Wall -pedantic -std=c99 -Wno-pointer-sign -O3
-COMP = $(CC) $(OPT) $(DBG) 
+#OPT = -O3 #-Wall -pedantic -std=c99 -Wno-pointer-sign -O3
+COMP = $(CC) $(OPT) 
 
 # working directories
 DIR = /tmp/skul/
@@ -38,6 +38,8 @@ BIN = bin/
 SRC = src/
 CRY = lib/crypto/
 LUK = lib/luks/
+
+-include lib/luks/luks.mk
 
 # openssl path
 #OPENSSLI="./lib/openssl/include"	# path to include dir
