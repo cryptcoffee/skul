@@ -59,7 +59,6 @@ int read_cfg(usrp *UP, int threads, char *cfg_path, int mode, int fast, engine_t
 	UP->NUM_THR=8;
 	UP->ALP_SET=1;
 	UP->FST_CHK=1;
-	UP->KEY_SEL=0;
 	UP->SEL_MOD=3;
 	UP->ENG_SEL=0;
 
@@ -83,8 +82,6 @@ int read_cfg(usrp *UP, int threads, char *cfg_path, int mode, int fast, engine_t
 				UP->ALP_SET=val;
 			}else if(memcmp(par,"FST_CHK",7)==0){
 				UP->FST_CHK=val;
-			}else if(memcmp(par,"KEY_SEL",7)==0){
-				UP->KEY_SEL=val;
 			}else if(memcmp(par,"SEL_MOD",7)==0){
 				UP->SEL_MOD=val;
 			}else if(memcmp(par,"PRG_BAR",7)==0){

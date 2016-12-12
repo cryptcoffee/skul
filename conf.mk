@@ -23,5 +23,6 @@ LUK = lib/luks/
 # dynamics linking options
 #DLO = -ldl -lm -I${OPENSSLI} -L${OPENSSLL} -lcrypto -lssl -lpthread  -pthread 
 DLO = -ldl -lm -lssl -lcrypto -lpthread -pthread
-CUOPT = --compiler-options='-DCUDA_ENGINE=1 $(OPT) $(DLO)'
+#CUOPT = --compiler-options='-DCUDA_ENGINE=1 $(OPT) $(DLO)'
+CUOPT = --compiler-options='-DCUDA_ENGINE=1 $(DLO) -O3'
 

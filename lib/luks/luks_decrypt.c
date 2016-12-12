@@ -127,10 +127,6 @@ int luks_open_key(char *key, int keylen, SKUL_CTX *ctx){
 					header->keyslot[ctx->cur_pwd].salt, LUKS_SALTSIZE, 
 					header->keyslot[ctx->cur_pwd].iterations,
 					usrKeyhashed.key, usrKeyhashed.keylen);
-//	ctx->tctx.luks->pbkdf2_function(usrKey.key, usrKey.keylen, 
-//					header->keyslot[ctx->cur_pwd].salt, LUKS_SALTSIZE, 
-//					64000,
-//					usrKeyhashed.key, usrKeyhashed.keylen);
 
 	/* 2) generate iv_salt if needed for key decryption */
 	if(ctx->tctx.luks->iv_mode == ESSIV){
@@ -184,8 +180,6 @@ int luks_open_key(char *key, int keylen, SKUL_CTX *ctx){
 	if(ctx->fast){
 		r=testkeydecryption(ctx->tctx.luks, master.key, ctx->tctx.luks->crypt_disk, 
 				header->key_bytes);
-//		r=testkeydecryption(ctx->tctx.luks, usrKeyhashed.key, ctx->tctx.luks->crypt_disk, 
-//				header->key_bytes);
 
 	}else{
 		r=testkeyhash(ctx->tctx.luks, master.key, master.keylen, header->mk_digest_salt,

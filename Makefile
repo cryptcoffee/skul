@@ -22,13 +22,13 @@
 
 -include conf.mk
 
-skul: $(SRC)skul.c $(OBJS)
+skul: $(SRC)skul.c
 	cd $(LIB); make cpu
 	cd $(CRY); make crypto
 	cd $(LUK); make luks_cpu
 	$(COMP) -o $@ $(SRC)skul.c $(DIR)luks.o $(DIR)random.o $(DIR)af.o $(DIR)utils.o $(DIR)luks_decrypt.o $(DIR)config.o $(DIR)thread.o $(DIR)attacks.o $(DIR)fastpbkdf2.o $(DIR)engine.o $(DIR)_luks_decrypt.o $(DLO)
 
-skulcu: $(SRC)skul.c $(CUOBJS)
+skulcu: $(SRC)skul.c
 	cd $(LIB); make cuda
 	cd $(CRY); make cuda_crypto
 	cd $(LUK); make luks_w_cuda

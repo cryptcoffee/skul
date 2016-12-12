@@ -182,6 +182,13 @@ int LUKS_init(LUKS_CTX *ctx, int pwd_default, int *num_pwds, int *pwd_ord, char 
 
 	*attack_mode=mod;
 
+#if CUDA_ENGINE
+	if((UP.ENG_SEL!=0) && (UP.FST_CHK==0)){
+		errprint("Sorry slow check is not yet implemented in GPU engines :(\n");
+		return 0;
+	}
+#endif
+
 	/* set the correct pbk_hash and related functions */
 	if(strcmp(ctx->header.hash_spec, "sha1")==0){
 		ctx->pbk_hash=SHA_ONE;
@@ -199,7 +206,7 @@ int LUKS_init(LUKS_CTX *ctx, int pwd_default, int *num_pwds, int *pwd_ord, char 
 		ctx->pbk_hash=SHA_FIVE_ONE_TWO;
 		ctx->pbkdf2_function = fastpbkdf2_hmac_sha512;
 #if CUDA_ENGINE
-		ctx->cuda_pbkdf2_function = NULL;
+		ctx->cuda_pbkdf2_function = cuda_pbkdf2_hmac_sha512_32;
 #endif
 	}else if(strcmp(ctx->header.hash_spec, "ripemd160")==0){
 		ctx->pbk_hash=RIPEMD;
@@ -212,7 +219,7 @@ int LUKS_init(LUKS_CTX *ctx, int pwd_default, int *num_pwds, int *pwd_ord, char 
 		return 0;
 	}
 
-	if((engine!=CPU) && (ctx->pbk_hash!=SHA_ONE)){
+	if((engine!=CPU) && (ctx->pbk_hash!=SHA_ONE) && (ctx->pbk_hash!=SHA_FIVE_ONE_TWO)){
 		errprint("Hash function still not supported on CUDA!\n");
 		return 0;
 	}
@@ -393,7 +400,7 @@ void print_header(pheader *header){
 
 void print_keyslot(pheader *header,int slot){
 
-	/*int j;*/
+	int j;
 
 	printf("KEYSLOT %d: ",slot);
 	if(header->keyslot[slot].active == LUKS_KEY_DISABLED){
@@ -401,13 +408,13 @@ void print_keyslot(pheader *header,int slot){
 	}else{
 		printf("ACTIVE\n");
 		printf("ITERATIONS: %d\n",header->keyslot[slot].iterations);
-/*		printf("SALT: ");
+		printf("SALT: ");
 		for(j=0;j<LUKS_SALTSIZE;j++){
-			printf("%02x ",header->keyslot[slot].salt[j]);
+			printf("%02x",header->keyslot[slot].salt[j]);
 		}
 		printf("\n");
 		printf("KEY MATERIAL OFFSET: %d sectors\n",header->keyslot[slot].key_material_offset);
-		printf("Stripes: %d\n",header->keyslot[slot].stripes);*/
+		printf("Stripes: %d\n",header->keyslot[slot].stripes);
 	}
 	
 }

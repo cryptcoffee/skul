@@ -209,10 +209,9 @@ __global__ void kernel_pbkdf2_sha1_32( gpu_inbuffer *inbuffer,
 }
 
 
-/* Custom version of pbkdf2: 
+/* Custom version of pbkdf2_hmac_sha1: 
  * - Works on a list of passwords 
  * - Outputs a list of 32byte derived keys
- * - num_pwds must be multiple of 64
  */
 extern "C"{
 int cuda_pbkdf2_hmac_sha1_32(unsigned char **pwdlst, size_t num_pwds, unsigned char *salt, 
@@ -226,7 +225,6 @@ int cuda_pbkdf2_hmac_sha1_32(unsigned char **pwdlst, size_t num_pwds, unsigned c
     gpu_outbuffer *h_outbuffer, *d_outbuffer;
 	cudaError_t cudaReturnValue;
 
-	/* cuda allocation */
 	h_inbuffer = (gpu_inbuffer *)calloc(num_pwds, sizeof(gpu_inbuffer));
 	if(h_inbuffer == NULL){
 		errprint("Malloc error\n");
@@ -313,7 +311,6 @@ int cuda_pbkdf2_hmac_sha1_32(unsigned char **pwdlst, size_t num_pwds, unsigned c
 
 	blks = ceil((num_pwds/64));
 
-	/* call the cuda kernel */
 	kernel_pbkdf2_sha1_32<<<blks, 64>>>(d_inbuffer, d_outbuffer, d_iter, num_pwds);
 	cudaDeviceSynchronize();
 

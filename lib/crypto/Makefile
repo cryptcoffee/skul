@@ -35,6 +35,14 @@ af.o: af.c
 fastpbkdf2.o: fastpbkdf2.c
 	$(COMP) -o $(DIR)$@ -c fastpbkdf2.c
 
-cuda_pbkdf2.o: cuda_pbkdf2.cu 
-	$(NVCC) $(CUOPT) -o $(DIR)$@ -c cuda_pbkdf2.cu 
+cuda_pbkdf2_hmac_sha1.o: 
+	$(NVCC) $(CUOPT) -o $(DIR)$@ -c cuda_pbkdf2_hmac_sha1.cu 
 
+cuda_pbkdf2_hmac_sha512.o: 
+	$(NVCC) $(CUOPT) -o $(DIR)$@ -c cuda_pbkdf2_hmac_sha512.cu 
+
+cuda_pbkdf2.o: cuda_pbkdf2_hmac_sha1.o cuda_pbkdf2_hmac_sha512.o
+	ld -r $(DIR)cuda_pbkdf2_hmac_sha1.o $(DIR)cuda_pbkdf2_hmac_sha512.o -o $(DIR)$@
+
+clean:
+	rm -f $(DIR)random.o $(DIR)af.o $(DIR)fastpbkdf2.o $(DIR)cuda_pbkdf2.o

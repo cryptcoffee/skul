@@ -40,7 +40,6 @@ typedef struct usr_preferences{
 	int NUM_THR;
 	int ALP_SET;
 	int FST_CHK;
-	int KEY_SEL;
 	int SEL_MOD;
 	int PRG_BAR;
 	int ENG_SEL;
