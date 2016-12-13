@@ -200,7 +200,7 @@ int LUKS_init(LUKS_CTX *ctx, int pwd_default, int *num_pwds, int *pwd_ord, char 
 		ctx->pbk_hash=SHA_TWO_FIVE_SIX;
 		ctx->pbkdf2_function = fastpbkdf2_hmac_sha256;
 #if CUDA_ENGINE
-		ctx->cuda_pbkdf2_function = NULL;
+		ctx->cuda_pbkdf2_function = cuda_pbkdf2_hmac_sha256_32;
 #endif
 	}else if(strcmp(ctx->header.hash_spec, "sha512")==0){
 		ctx->pbk_hash=SHA_FIVE_ONE_TWO;
@@ -219,7 +219,7 @@ int LUKS_init(LUKS_CTX *ctx, int pwd_default, int *num_pwds, int *pwd_ord, char 
 		return 0;
 	}
 
-	if((engine!=CPU) && (ctx->pbk_hash!=SHA_ONE) && (ctx->pbk_hash!=SHA_FIVE_ONE_TWO)){
+	if((engine!=CPU) && (ctx->pbk_hash==RIPEMD)){
 		errprint("Hash function still not supported on CUDA!\n");
 		return 0;
 	}

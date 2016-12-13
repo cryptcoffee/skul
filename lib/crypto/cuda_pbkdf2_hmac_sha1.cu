@@ -214,8 +214,9 @@ __global__ void kernel_pbkdf2_sha1_32( gpu_inbuffer *inbuffer,
  * - Outputs a list of 32byte derived keys
  */
 extern "C"{
-int cuda_pbkdf2_hmac_sha1_32(unsigned char **pwdlst, size_t num_pwds, unsigned char *salt, 
-						  size_t saltlen, uint32_t iterations, uint8_t **key){
+int cuda_pbkdf2_hmac_sha1_32(unsigned char **pwdlst, size_t num_pwds, 
+				unsigned char *salt, size_t saltlen, uint32_t iterations, 
+				uint8_t **key){
 
 
 	unsigned char pad[64], temp[32], *passwd;

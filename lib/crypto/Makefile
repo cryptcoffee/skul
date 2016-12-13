@@ -41,8 +41,11 @@ cuda_pbkdf2_hmac_sha1.o:
 cuda_pbkdf2_hmac_sha512.o: 
 	$(NVCC) $(CUOPT) -o $(DIR)$@ -c cuda_pbkdf2_hmac_sha512.cu 
 
-cuda_pbkdf2.o: cuda_pbkdf2_hmac_sha1.o cuda_pbkdf2_hmac_sha512.o
-	ld -r $(DIR)cuda_pbkdf2_hmac_sha1.o $(DIR)cuda_pbkdf2_hmac_sha512.o -o $(DIR)$@
+cuda_pbkdf2_hmac_sha256.o: 
+	$(NVCC) $(CUOPT) -o $(DIR)$@ -c cuda_pbkdf2_hmac_sha256.cu 
+
+cuda_pbkdf2.o: cuda_pbkdf2_hmac_sha1.o cuda_pbkdf2_hmac_sha512.o cuda_pbkdf2_hmac_sha256.o
+	ld -r $(DIR)cuda_pbkdf2_hmac_sha1.o $(DIR)cuda_pbkdf2_hmac_sha512.o $(DIR)cuda_pbkdf2_hmac_sha256.o -o $(DIR)$@
 
 clean:
 	rm -f $(DIR)random.o $(DIR)af.o $(DIR)fastpbkdf2.o $(DIR)cuda_pbkdf2.o

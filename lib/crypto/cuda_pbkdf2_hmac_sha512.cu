@@ -171,8 +171,8 @@ void sha512_process( const SHA512_DEV_CTX *ctx, SHA512_DEV_CTX *data){
 }
 
 
-__global__ void kernel_pbkdf2_sha512_32( gpu_inbuffer512 *inbuffer, 
-									gpu_outbuffer512 *outbuffer, int *iterations, int num_pwds) {
+__global__ void kernel_pbkdf2_sha512_32( gpu_inbuffer512 *inbuffer,
+			gpu_outbuffer512 *outbuffer, int *iterations, int num_pwds) {
 	
 	int i;
 	SHA512_DEV_CTX temp_ctx, pmk_ctx; 
