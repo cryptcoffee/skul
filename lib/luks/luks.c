@@ -284,7 +284,7 @@ int read_header(pheader *header, char *path, int *slot){
 	FILE *disk;
 	int i;
 
-	if(!(disk=fopen(path,"rb+"))){
+	if(!(disk=fopen(path,"rb"))){
 		errprint("cannot open file: %s\n",path);
 		return 0;
 	}
@@ -437,7 +437,7 @@ int read_disk(unsigned char *dst, size_t size, char *path, size_t offset){
 	
 	FILE *file;
 
-	if(!(file=fopen(path,"rb+"))){
+	if(!(file=fopen(path,"rb"))){
 		perror("fopen");
 		return 0;
 	}
