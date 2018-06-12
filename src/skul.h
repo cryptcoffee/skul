@@ -6,6 +6,7 @@
  * */ 
 #define SKUL_MAJOR 0
 #define SKUL_MINOR 2
+#define SKUL_HOTFIX 3
 /*#define DEBUG */
 #define LOG 0
 
