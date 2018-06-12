@@ -49,6 +49,8 @@ int decrypt(int mode, unsigned char *key, unsigned char *encryptedData,
 		unsigned char *decryptedData, unsigned char *iv){
 
 	int decryptedLength, lastDecryptLength = 0;
+
+	/* Create and initialize the context */
 	EVP_CIPHER_CTX *cipher = EVP_CIPHER_CTX_new();
 	if (cipher == NULL) {
 		printf("Unable to create new EVP_CIPHER_CTX structure\n");
@@ -57,8 +59,6 @@ int decrypt(int mode, unsigned char *key, unsigned char *encryptedData,
 	
 	decryptedLength = 0;
 	lastDecryptLength = 0;
-
-	EVP_CIPHER_CTX_init(cipher);
 
 	/* Initialise the decryption operation.*/
 	switch(mode){
@@ -130,6 +130,8 @@ int gen_essiv(unsigned char *key, unsigned char *ciphertext,
 		int length){
 
 	int outl, lastDecryptLength=0, r=1;
+
+	/* Create and initialize the context */
 	EVP_CIPHER_CTX *cipher = EVP_CIPHER_CTX_new();
 	if (cipher == NULL) {
 		printf("Unable to create new EVP_CIPHER_CTX structure\n");
@@ -138,9 +140,6 @@ int gen_essiv(unsigned char *key, unsigned char *ciphertext,
 
 	outl = 0;
 	lastDecryptLength = 0;
-
-	/* Create and initialise the context */
-	EVP_CIPHER_CTX_init(cipher);
 
 	/* Initialise the decryption operation. */
 	if(1 != EVP_EncryptInit_ex(cipher, EVP_aes_256_ecb(), NULL, key, NULL)){ 
@@ -173,7 +172,7 @@ int gen_essiv(unsigned char *key, unsigned char *ciphertext,
 	
 end:
 
-	EVP_CIPHER_CTX_cleanup(cipher);
+	EVP_CIPHER_CTX_free(cipher);
 	return r;
 }
 

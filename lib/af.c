@@ -43,16 +43,15 @@ static int hash_buf(char *src, char *dst, uint32_t iv, int len, const EVP_MD *ha
 		printf("Unable to create new EVP_MD_CTX structure\n");
 		return 1;
 	};
+
 	unsigned char digest[128];
-
 	iv = htonl(iv);
-
 	EVP_DigestInit(mdctx, hash_id);
 	EVP_DigestUpdate(mdctx, (unsigned char *)&iv, sizeof(iv));
 	EVP_DigestUpdate(mdctx, src, len);
 	EVP_DigestFinal(mdctx, digest, NULL);
 	memcpy(dst, digest, len);
-
+	EVP_MD_CTX_free(mdctx);
 	return 0;
 }
 
