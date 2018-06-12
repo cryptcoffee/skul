@@ -49,45 +49,49 @@ int decrypt(int mode, unsigned char *key, unsigned char *encryptedData,
 		unsigned char *decryptedData, unsigned char *iv){
 
 	int decryptedLength, lastDecryptLength = 0;
-	EVP_CIPHER_CTX cipher;
-
+	EVP_CIPHER_CTX *cipher = EVP_CIPHER_CTX_new();
+	if (cipher == NULL) {
+		printf("Unable to create new EVP_CIPHER_CTX structure\n");
+		return 0;
+	}
+	
 	decryptedLength = 0;
 	lastDecryptLength = 0;
 
-	EVP_CIPHER_CTX_init(&cipher);
+	EVP_CIPHER_CTX_init(cipher);
 
 	/* Initialise the decryption operation.*/
 	switch(mode){
 		case ECB:
-			if(1 != EVP_DecryptInit_ex(&cipher, 
+			if(1 != EVP_DecryptInit_ex(cipher, 
 						EVP_aes_256_ecb(), NULL, key, NULL)){
 				printf("Error setting aes\n");
 			}
 			break;
 		case CBC:
-			if(1 != EVP_DecryptInit_ex(&cipher, 
+			if(1 != EVP_DecryptInit_ex(cipher, 
 						EVP_aes_256_cbc(), NULL, key, iv)){ 
 				printf("Error setting aes\n");
 			}
 			break;
 		case XTS:
-			if(1 != EVP_DecryptInit_ex(&cipher,
+			if(1 != EVP_DecryptInit_ex(cipher,
 						EVP_aes_128_xts(),NULL,key,iv)){
 				printf("Error setting aes\n");
 			}
 	}
 
-	if(!EVP_CIPHER_CTX_set_padding(&cipher, 0)){
+	if(!EVP_CIPHER_CTX_set_padding(cipher, 0)){
 		printf("This is so strange.. should always return 1\n");
 	}
 
-	if(!EVP_DecryptUpdate(&cipher, 
+	if(!EVP_DecryptUpdate(cipher, 
 				decryptedData, &decryptedLength, 
 				encryptedData, encryptedLength)){
 		printf("EVP_DecryptUpdate_ex error\n");
 	}
 
-	if(!EVP_DecryptFinal_ex(&cipher, 
+	if(!EVP_DecryptFinal_ex(cipher, 
 			decryptedData + decryptedLength, 
 			&lastDecryptLength)){
 		printf("EVP_DecryptFinal_ex error\n");
@@ -95,7 +99,7 @@ int decrypt(int mode, unsigned char *key, unsigned char *encryptedData,
 	
 	*length = decryptedLength + lastDecryptLength;
 	
-	EVP_CIPHER_CTX_cleanup(&cipher);
+	EVP_CIPHER_CTX_free(cipher);
 	return 1;
 }
 
@@ -126,26 +130,30 @@ int gen_essiv(unsigned char *key, unsigned char *ciphertext,
 		int length){
 
 	int outl, lastDecryptLength=0, r=1;
-	EVP_CIPHER_CTX cipher;
+	EVP_CIPHER_CTX *cipher = EVP_CIPHER_CTX_new();
+	if (cipher == NULL) {
+		printf("Unable to create new EVP_CIPHER_CTX structure\n");
+		return 0;
+	}
 
 	outl = 0;
 	lastDecryptLength = 0;
 
 	/* Create and initialise the context */
-	EVP_CIPHER_CTX_init(&cipher);
+	EVP_CIPHER_CTX_init(cipher);
 
 	/* Initialise the decryption operation. */
-	if(1 != EVP_EncryptInit_ex(&cipher, EVP_aes_256_ecb(), NULL, key, NULL)){ 
+	if(1 != EVP_EncryptInit_ex(cipher, EVP_aes_256_ecb(), NULL, key, NULL)){ 
 		printf("Error setting aes\n");
 		r=0;
 		goto end;
 	}
 
-	if(!EVP_CIPHER_CTX_set_padding(&cipher, 0)){
+	if(!EVP_CIPHER_CTX_set_padding(cipher, 0)){
 		printf("This is so strange.. should always return 1\n");
 	}
 
-	if(!EVP_EncryptUpdate(&cipher, 
+	if(!EVP_EncryptUpdate(cipher, 
 				ciphertext, &outl, 
 				plaintext, length)){
 		printf("EVP_DecryptUpdate_ex error\n");
@@ -153,7 +161,7 @@ int gen_essiv(unsigned char *key, unsigned char *ciphertext,
 		goto end;
 	}
 
-	if(!EVP_EncryptFinal_ex(&cipher, 
+	if(!EVP_EncryptFinal_ex(cipher, 
 			plaintext + outl, 
 			&lastDecryptLength)){
 		printf("EVP_DecryptFinal_ex error\n");
@@ -165,7 +173,7 @@ int gen_essiv(unsigned char *key, unsigned char *ciphertext,
 	
 end:
 
-	EVP_CIPHER_CTX_cleanup(&cipher);
+	EVP_CIPHER_CTX_cleanup(cipher);
 	return r;
 }
 
