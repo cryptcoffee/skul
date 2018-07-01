@@ -39,7 +39,6 @@ typedef struct threadlist_data{
 	pheader header;
 	int iv_mode;
 	int chain_mode;
-	lkey_t encrypted;
 	char *crypt_disk;
 	int fast_check;
 	int max_l;
@@ -61,7 +60,6 @@ typedef struct threadforce_data{
 	pheader header;
 	int iv_mode;
 	int chain_mode;
-	lkey_t encrypted;
 	char *crypt_disk;
 	char *set;
 	int fast_check;
@@ -73,15 +71,13 @@ typedef struct threadforce_data{
 }thforce_data;
 
 int thlist_datainit(thlist_data *arg, int id, char **list, int num, 
-		pheader *header, int iv_mode, int chain_mode, lkey_t *encrypted, 
-		char *crypt_disk, int fast_check,int max_l, int keyslot, int *progress,
-		char *win_pwd);
+		pheader *header, int iv_mode, int chain_mode, char *crypt_disk, 
+		int fast_check,int max_l, int keyslot, int *progress, char *win_pwd);
 
 int thforce_datainit(thforce_data *arg, int id, int start, int num,
 		int comb, int len, int set_len, pheader *header, int iv_mode,
-		int chain_mode, lkey_t *encrypted, char *crypt_disk, 
-		int fast_check, char *set, int keyslot,int *progress,
-		char *win_pwd);
+		int chain_mode, char *crypt_disk, int fast_check, char *set, 
+		int keyslot,int *progress, char *win_pwd);
 
 int th_control(int max_l, int count, pthread_t *threads, int num_th, 
 		pheader *header, int *progress, char *win_pwd, int keyslot, int prg_bar);

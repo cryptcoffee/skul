@@ -56,7 +56,7 @@ int main(int argc, char **argv){
 	unsigned char *crypt_disk=NULL;
 	char *path, *set; 
 	pheader header;
-	lkey_t encrypted;
+	//lkey_t encrypted;
 	int iv_mode, chain_mode,i,set_len,num,j,c, mod;
 	int slot[8], slot_order[8];
 	usrp UP;
@@ -103,8 +103,8 @@ int main(int argc, char **argv){
 		errprint("calloc error!\n");
 		exit(EXIT_FAILURE);
 	}
-	if(!initfs(&header, &iv_mode, &chain_mode, crypt_disk, path, 
-				&encrypted,	slot)){
+	if(!initfs(&header, &iv_mode, &chain_mode, 
+				crypt_disk, path, slot)){
 		exit(EXIT_FAILURE);
 	}
 
@@ -113,8 +113,11 @@ int main(int argc, char **argv){
 
 	if(UP.SEL_MOD!=0){
 		print_header(&header);
-		printf("\nATTACKING KEYSLOTS:\n\n");
-		print_keyslot(&header,0);
+		printf("\nKEYSLOTS:\n\n");
+		int i;
+		for(i=0; i<8; i++){
+			print_keyslot(&header,i);
+		}
 		printf("\n");
 	}
 
@@ -160,9 +163,10 @@ int main(int argc, char **argv){
 			/* START GLOBAL TIMER */
 			gettimeofday(&t0,NULL);
 			for(j=0;j<num;j++){
+				printf("Attacking keyslot: %d\n", slot_order[j]);
 				for(i=UP.MIN_LEN;i<=UP.MAX_LEN;i++){
 					if(bruteforce(i, set, set_len, &header, iv_mode, 
-								chain_mode, &encrypted, crypt_disk,
+								chain_mode, crypt_disk,
 									slot_order[j],UP.NUM_THR,UP.FST_CHK,UP.PRG_BAR)){
 						break;
 					}
@@ -177,8 +181,10 @@ int main(int argc, char **argv){
 			printf("\n");
 
 			for(j=0;j<num;j++){
-				pwlist(&header, iv_mode, chain_mode, &encrypted, crypt_disk,
-						slot_order[j],UP.NUM_THR,UP.FST_CHK,UP.PRG_BAR);
+				printf("Attacking keyslot: %d\n", slot_order[j]);
+				if(pwlist(&header, iv_mode, chain_mode, crypt_disk,
+						slot_order[j],UP.NUM_THR,UP.FST_CHK,UP.PRG_BAR))
+					break;
 			}
 			break;
 
@@ -194,13 +200,14 @@ int main(int argc, char **argv){
 			printf("\n");
 
 			for(j=0;j<num;j++){
-				if(!pwlist(&header, iv_mode, chain_mode, &encrypted, crypt_disk,
+				printf("Attacking keyslot: %d\n", slot_order[j]);
+				if(!pwlist(&header, iv_mode, chain_mode, crypt_disk,
 							slot_order[j],UP.NUM_THR,UP.FST_CHK,UP.PRG_BAR)){
 					/* then call bruteforce */
 					set = init_set(&set_len,UP.ALP_SET); 
 					for(i=UP.MIN_LEN;i<=UP.MAX_LEN;i++){
 						if(bruteforce(i, set, set_len, &header, iv_mode, 
-									chain_mode, &encrypted, crypt_disk, 
+									chain_mode, crypt_disk, 
 									slot_order[j],UP.NUM_THR,UP.FST_CHK,UP.PRG_BAR)){
 							break;
 						}
@@ -223,7 +230,7 @@ int main(int argc, char **argv){
 
 	/* free memory */
 	EVP_cleanup();
-	free(encrypted.key);
+	//free(encrypted.key);
 	freeheader(&header);
 	free(crypt_disk);
 	if(mod==1||mod==3){

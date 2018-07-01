@@ -43,6 +43,7 @@
 #define LUKS_STRIPES 4000
 
 int alloc_header(pheader *header);
+int alloc_keyslots(pheader *header);
 void freeheader(pheader *header);
 char *readline(FILE *f, int *max_l);
 

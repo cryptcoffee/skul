@@ -60,8 +60,7 @@ int testkeyhash(char *key, int keylen, char *salt,
 int testkeydecryption(int mode, char *key, char *crypt_disk, int keylen);
 
 int open_key(char *key, int keylen, pheader *header, int iv_mode,
-		int chain_mode, lkey_t *encrypted, char *crypt_disk, 
-		int quick_test, int keyslot, int pbk_hash);
+		int chain_mode, char *crypt_disk, int quick_test, int keyslot, int pbk_hash);
 
 #endif
 

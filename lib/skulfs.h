@@ -49,6 +49,7 @@ typedef struct key_slot{
 	unsigned char *salt;
 	uint32_t key_material_offset;
 	uint32_t stripes;
+	lkey_t   encrypted;
 }keyslot_t;
 
 typedef struct luks_header{
@@ -71,6 +72,6 @@ int read_disk(unsigned char *disk, size_t size, char *path, size_t offset);
 void print_header(pheader *header);
 void print_keyslot(pheader *header,int slot);
 int initfs(pheader *header, int *iv_mode, int *chain_mode, char *crypt_disk, 
-		char *path, lkey_t *encrypted, int *slot);
+		char *path, int *slot);
 
 #endif
