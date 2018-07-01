@@ -61,7 +61,7 @@ int main(int argc, char **argv){
 	int slot[8], slot_order[8];
 	usrp UP;
 	struct timeval t0,t1;
-	unsigned long sec;
+	unsigned long secs;
 
 	set = NULL;
 	
@@ -180,6 +180,7 @@ int main(int argc, char **argv){
 			getchar();
 			printf("\n");
 
+			gettimeofday(&t0,NULL);
 			for(j=0;j<num;j++){
 				printf("Attacking keyslot: %d\n", slot_order[j]);
 				if(pwlist(&header, iv_mode, chain_mode, crypt_disk,
@@ -199,6 +200,7 @@ int main(int argc, char **argv){
 			getchar();
 			printf("\n");
 
+			gettimeofday(&t0,NULL);
 			for(j=0;j<num;j++){
 				printf("Attacking keyslot: %d\n", slot_order[j]);
 				if(!pwlist(&header, iv_mode, chain_mode, crypt_disk,
@@ -224,9 +226,9 @@ int main(int argc, char **argv){
 
 	/* STOP GLOBAL TIMER */
 	gettimeofday(&t1,NULL);
-	sec=t1.tv_sec-t0.tv_sec;
+	secs=t1.tv_sec-t0.tv_sec;
 	printf("TOTAL TIME: ");
-	print_time(sec);
+	print_time(secs);
 
 	/* free memory */
 	EVP_cleanup();
