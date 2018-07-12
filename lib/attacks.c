@@ -119,10 +119,9 @@ char *init_set(int *set_len, int id_set){
 	return set;
 }
 
-int bruteforce(int len, char *set, 
-		int set_len, pheader *header, 
-		int iv_mode, int chain_mode, lkey_t *encrypted, 
-		char *crypt_disk, int keyslot, int num_thr, int fst_chk, int prg_bar){
+int bruteforce(int len, char *set, int set_len, pheader *header, 
+		int iv_mode, int chain_mode, char *crypt_disk, int keyslot, 
+		int num_thr, int fst_chk, int prg_bar){
 
 	int j,jpt,jptr,lpt,lptr/*,num,comb*/,tot_comb,*progress,reminder,start,tot=0,found=1;
 	thforce_data *arg;
@@ -173,7 +172,7 @@ int bruteforce(int len, char *set,
 	for(j=0;j<reminder;j++){
 		start = j*lptr;
 		if(!thforce_datainit(&(arg[j]), j, start, lptr, jptr, len, set_len, 
-					header, iv_mode, chain_mode, encrypted, crypt_disk, 
+					header, iv_mode, chain_mode, crypt_disk, 
 					fst_chk, set, keyslot,&progress[j], win_pwd)){
 			errprint("thforce_datainit error!\n");
 			return 0;
@@ -184,7 +183,7 @@ int bruteforce(int len, char *set,
 	for(j=reminder;j<num_thr;j++){
 		start = reminder*lptr + (j-reminder)*lpt;
 		if(!thforce_datainit(&(arg[j]), j, start, lpt, jpt, len, set_len, 
-					header, iv_mode, chain_mode, encrypted, crypt_disk, 
+					header, iv_mode, chain_mode, crypt_disk, 
 					fst_chk, set, keyslot,&progress[j], win_pwd)){
 			errprint("thforce_datainit error!\n");
 			return 0;
@@ -247,7 +246,7 @@ int bruteforce(int len, char *set,
 }
 
 int pwlist(pheader *header, int iv_mode, int chain_mode, 
-		lkey_t *encrypted, char *crypt_disk, int keyslot, 
+		char *crypt_disk, int keyslot, 
 		int num_thr, int fst_chk, int prg_bar){
 
 	char **list, c, *win_pwd;
@@ -312,9 +311,8 @@ int pwlist(pheader *header, int iv_mode, int chain_mode,
 	jforth = count/num_thr;
 	for(j=0;j<num_thr-1;j++){
 		if(!thlist_datainit(&(arg[j]), j, list+(j*jforth), jforth,
-					header, iv_mode, chain_mode, encrypted, 
-					crypt_disk, fst_chk, max_l, keyslot,
-					&progress[j],win_pwd)){
+					header, iv_mode, chain_mode, crypt_disk, fst_chk, 
+					max_l, keyslot, &progress[j],win_pwd)){
 			errprint("thlist_datainit error!\n");
 			return 0;
 		}
@@ -344,9 +342,8 @@ int pwlist(pheader *header, int iv_mode, int chain_mode,
 	 */
 	lastj = count - (jforth *(num_thr-1));
 	if(!thlist_datainit(&(arg[j]), j, list+(j*jforth), lastj,
-				header, iv_mode, chain_mode, encrypted, 
-				crypt_disk, fst_chk, max_l, keyslot,
-				&progress[j],win_pwd)){
+				header, iv_mode, chain_mode, crypt_disk, fst_chk, 
+				max_l, keyslot, &progress[j],win_pwd)){
 		errprint("thlistdata_init error!\n");
 		return 0;
 	}

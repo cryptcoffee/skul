@@ -330,14 +330,15 @@ int testkeydecryption(int mode, char *key, char *crypt_disk, int keylen){
 }
 
 int open_key(char *key, int keylen, pheader *header, int iv_mode,
-		int chain_mode, lkey_t *encrypted, char *crypt_disk, 
-		int quick_test, int keyslot, int pbk_hash){
+		int chain_mode, char *crypt_disk, int quick_test, int keyslot, int pbk_hash){
 	
 	unsigned char *iv_salt=NULL, *buff, *iv;
 	unsigned int AFSectors, outl;
 	uint32_t sec, sector;
 	int j=0,r=0;
-	lkey_t master, split, usrKey, usrKeyhashed;
+	lkey_t master, split, usrKey, usrKeyhashed, *encrypted;
+
+	encrypted = &(header->keyslot[keyslot].encrypted);
 
 	master.key = calloc(header->key_bytes+1, sizeof(char));
 	master.keylen = header->key_bytes;

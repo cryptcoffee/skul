@@ -34,8 +34,6 @@
 
 int alloc_header(pheader *header){
 	
-	int i;
-	
 	if(!(header->magic = calloc(7,sizeof(char)))){
 		fprintf(stderr,"malloc error\n");
 		return 0;
@@ -64,10 +62,23 @@ int alloc_header(pheader *header){
 		fprintf(stderr,"malloc error\n");
 		return 0;
 	}
+	
+	return 1;
+}
+
+int alloc_keyslots(pheader *header){
+	
+	int i;
 
 	/* keyslot field allocation */
 	for(i=0;i<LUKS_NUMKEYS;i++){
 		if(!(header->keyslot[i].salt = calloc(LUKS_SALTSIZE,sizeof(char)))){
+			fprintf(stderr,"malloc error\n");
+			return 0;
+		}
+		header->keyslot[i].encrypted.keylen = (header->key_bytes) * LUKS_STRIPES;
+		if(!(header->keyslot[i].encrypted.key = 
+					calloc(header->keyslot[i].encrypted.keylen,sizeof(char)))){
 			fprintf(stderr,"malloc error\n");
 			return 0;
 		}
@@ -104,6 +115,7 @@ void freeheader(pheader *header){
 		fprintf(stderr,"	->uuid deallocated\n");
 	for(i=0;i<LUKS_NUMKEYS;i++){
 		free(header->keyslot[i].salt);
+		free(header->keyslot[i].encrypted.key);
 		if(DEBUG)
 			fprintf(stderr,"	->keyslot[%d]: salt deallocated\n",i);
 	}

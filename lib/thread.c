@@ -43,9 +43,8 @@ pthread_cond_t condition_cond = PTHREAD_COND_INITIALIZER;
 pthread_mutex_t condition_mutex = PTHREAD_MUTEX_INITIALIZER;
 
 int thlist_datainit(thlist_data *arg, int id, char **list, int num, 
-		pheader *header, int iv_mode, int chain_mode, lkey_t *encrypted, 
-		char *crypt_disk, int fast_check,int max_l, int keyslot, 
-		int *progress, char *win_pwd){
+		pheader *header, int iv_mode, int chain_mode, char *crypt_disk, 
+		int fast_check,int max_l, int keyslot, int *progress, char *win_pwd){
 
 	int i,l;
 
@@ -73,14 +72,6 @@ int thlist_datainit(thlist_data *arg, int id, char **list, int num,
 		memcpy(arg->list[i],list[i],l);
 	}
 
-	/* create a copy of the key for the current thread */
-	if((arg->encrypted.key=calloc(encrypted->keylen,sizeof(char)))==NULL){
-		errprint("malloc error!\n");
-		return 0;
-	}
-	arg->encrypted.keylen=encrypted->keylen;
-	memcpy(arg->encrypted.key,encrypted->key,encrypted->keylen);
-	
 	/* create a copy of the header for the current thread */
 	if(!alloc_header(&(arg->header))){
 		errprint("alloc_header error!\n");
@@ -115,9 +106,8 @@ int thlist_datainit(thlist_data *arg, int id, char **list, int num,
 
 int thforce_datainit(thforce_data *arg, int id, int start, int num,	
 		int comb, int len, int set_len, pheader *header, int iv_mode,
-		int chain_mode, lkey_t *encrypted, char *crypt_disk, 
-		int fast_check, char *set, int keyslot, int *progress,
-		char *win_pwd){
+		int chain_mode, char *crypt_disk, int fast_check, char *set, 
+		int keyslot, int *progress, char *win_pwd){
 
 	arg->id=id;
 	arg->start=start;
@@ -131,15 +121,6 @@ int thforce_datainit(thforce_data *arg, int id, int start, int num,
 	arg->keyslot=keyslot;
 	arg->progress=progress;
 	arg->win_pwd=win_pwd;
-	
-
-	/* create a copy of the key for the current thread */
-	if((arg->encrypted.key=calloc(encrypted->keylen,sizeof(char)))==NULL){
-		errprint("malloc error!\n");
-		return 0;
-	}
-	arg->encrypted.keylen=encrypted->keylen;
-	memcpy(arg->encrypted.key,encrypted->key,encrypted->keylen);
 	
 	/* create a copy of the header for the current thread */
 	if(!alloc_header(&(arg->header))){
@@ -177,7 +158,6 @@ int thforce_datainit(thforce_data *arg, int id, int start, int num,
 		return 0;
 	}
 
-
 	return 1;
 }
 
@@ -206,7 +186,7 @@ void *th_force(void *param){
 
 		
 		found = open_key(guess, d->len, &(d->header), d->iv_mode, 
-				d->chain_mode, &(d->encrypted), d->crypt_disk,
+				d->chain_mode, d->crypt_disk,
 				d->fast_check, d->keyslot, d->pbk_hash);
 		
 		*(d->progress)=*(d->progress) + 1;
@@ -242,7 +222,7 @@ void *th_list(void *param){
 		*(d->progress)= *(d->progress)+1;
 		len = strlen(d->list[j]);
 		found = open_key(d->list[j], len, &(d->header), d->iv_mode, 
-				d->chain_mode, &(d->encrypted), d->crypt_disk, 
+				d->chain_mode, d->crypt_disk, 
 				d->fast_check, d->keyslot, d->pbk_hash);
 
 		if(found){
@@ -367,7 +347,7 @@ void *test_force(void *param){
 
 		
 		found = open_key(guess, d->len, &(d->header), d->iv_mode, 
-				d->chain_mode, &(d->encrypted), d->crypt_disk,
+				d->chain_mode, d->crypt_disk,
 				d->fast_check, d->keyslot, d->pbk_hash);
 		
 		*(d->progress)=*(d->progress) + 1;
@@ -401,7 +381,7 @@ void *test_list(void *param){
 		*(d->progress)= *(d->progress)+1;
 		len = strlen(d->list[j]);
 		found = open_key(d->list[j], len, &(d->header), d->iv_mode, 
-				d->chain_mode, &(d->encrypted), d->crypt_disk, 
+				d->chain_mode, d->crypt_disk, 
 				d->fast_check, d->keyslot, d->pbk_hash);
 
 		if(found){

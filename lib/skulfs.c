@@ -120,6 +120,12 @@ int read_header(pheader *header, char *path, int *slot){
 	if(!uint32read(&header->key_bytes,disk)){
 		return 0;
 	}
+	/* Allocation of keyslots can happen only 
+	 * once we have the key_bytes field */
+	if(!alloc_keyslots(header)){
+		return 0;
+	}
+			
 	
 	if(fread(header->mk_digest,sizeof(char),LUKS_DIGESTSIZE,disk)<LUKS_DIGESTSIZE){
 		return 0;
@@ -174,49 +180,55 @@ void print_header(pheader *header){
 
 	int i;
 
-	printf("Magic: ");
+	printf("Disk UUID:         %s\n",header->uuid);
+	printf("Magic:             ");
 	for(i=0;i<4;i++){
 		printf("%c",header->magic[i]);
 	}
 	printf(" %#02x %#02x",header->magic[4],header->magic[5]);
 	printf("\n");
-	printf("Version: %d\n",header->version);
-	printf("Disk UUID: %s\n",header->uuid);
-	printf("Cipher name: %s\n",header->cipher_name);
-	printf("Cipher mode: %s\n",header->cipher_mode);
-	printf("Hash Function: %s\n",header->hash_spec);
-	printf("Master key len: %d byte (%d bit)\n",header->key_bytes, (header->key_bytes * 8));
-/*	printf("MASTER KEY DIGEST: ");
+	printf("Version:           %d\n",header->version);
+	printf("Cipher name:       %s\n",header->cipher_name);
+	printf("Cipher mode:       %s\n",header->cipher_mode);
+	printf("Hash spec:         %s\n",header->hash_spec);
+	printf("Master key len:    %d byte (%d bit)\n",header->key_bytes, (header->key_bytes * 8));
+	printf("Master key digest: ");
 	for(i=0;i<LUKS_DIGESTSIZE;i++){
 		printf("%02x ",header->mk_digest[i]);
 	}
 	printf("\n");
-	printf("MASTER KEY SALT: ");
+	printf("Master key salt:   ");
 	for(i=0;i<LUKS_SALTSIZE;i++){
+		if(i==16){
+			printf("\n                   ");
+		}
 		printf("%02x ",header->mk_digest_salt[i]);
 	}
-	printf("\n");*/
-	printf("Iterations: %d\n",header->mk_digest_iter);
+	printf("\n");
+	printf("Iterations:        %d\n",header->mk_digest_iter);
 
 }
 
 void print_keyslot(pheader *header,int slot){
 
-/*	int j;*/
+	int j;
 
 	printf("KEYSLOT %d: ",slot);
 	if(header->keyslot[slot].active == LUKS_KEY_DISABLED){
 		printf("INACTIVE\n");
 	}else{
 		printf("ACTIVE\n");
-		printf("ITERATIONS: %d\n",header->keyslot[slot].iterations);
-/*		printf("SALT: ");
+		printf("\tIterations:            %d\n",header->keyslot[slot].iterations);
+		printf("\tSalt:                  ");
 		for(j=0;j<LUKS_SALTSIZE;j++){
+			if(j==16){
+				printf("\n\t                       ");
+			}
 			printf("%02x ",header->keyslot[slot].salt[j]);
 		}
 		printf("\n");
-		printf("KEY MATERIAL OFFSET: %d sectors\n",header->keyslot[slot].key_material_offset);*/
-		printf("Stripes: %d\n",header->keyslot[slot].stripes);
+		printf("\tKey material offset:   %d sectors\n",header->keyslot[slot].key_material_offset);
+		printf("\tStripes:               %d\n",header->keyslot[slot].stripes);
 	}
 	
 }
@@ -247,9 +259,11 @@ int read_disk(unsigned char *dst, size_t size, char *path, size_t offset){
 }
 
 int initfs(pheader *header, int *iv_mode, int *chain_mode, char *crypt_disk, 
-		char *path, lkey_t *encrypted, int *slot){
+		char *path, int *slot){
 
 	const unsigned char LUKS_MAGIC[6] = {'L','U','K','S',0xBA,0xBE};
+	int i = 0;
+
 	/* header initializations */
 	if(!(alloc_header(header))){
 		errprint("error in header allocation!\n");
@@ -263,6 +277,18 @@ int initfs(pheader *header, int *iv_mode, int *chain_mode, char *crypt_disk,
 	}
 	if(memcmp(header->magic, LUKS_MAGIC, 6) != 0){
 		errprint("Not a LUKS disk!\n");
+		errprint("Expected magic: ");
+		for(i=0;i<4;i++){
+			printf("%c",LUKS_MAGIC[i]);
+		}
+		printf(" %#02x %#02x",LUKS_MAGIC[4],LUKS_MAGIC[5]);
+		printf("\n");
+
+		errprint("Found magic:    ");
+		for(i=0;i<4;i++){
+			printf("%c",header->magic[i]);
+		}
+		printf(" %#02x %#02x",header->magic[4],header->magic[5]);
 		exit(EXIT_FAILURE);
 	}
 	
@@ -283,15 +309,20 @@ int initfs(pheader *header, int *iv_mode, int *chain_mode, char *crypt_disk,
 	 * 						 ks.key−material−offset and length
 	 * 						 masterKeyLength × ks.stripes
 	 * */
-	encrypted->keylen = header->key_bytes * LUKS_STRIPES;
-	encrypted->key = calloc(encrypted->keylen, sizeof(char));
+	//encrypted->keylen = header->key_bytes * LUKS_STRIPES;
+	//encrypted->key = calloc(encrypted->keylen, sizeof(char));
 
-	if(!(read_disk(encrypted->key,
-					encrypted->keylen,path,
-					header->keyslot[0].key_material_offset*SECTOR_SIZE))){
-		errprint("error reading encryptedKey\n");
-		exit(EXIT_FAILURE);
+	for(i=0; i<LUKS_NUMKEYS; i++){
+		if(header->keyslot[i].active != LUKS_KEY_DISABLED){
+			if(!(read_disk(header->keyslot[i].encrypted.key,
+								header->keyslot[i].encrypted.keylen, path,
+								header->keyslot[i].key_material_offset*SECTOR_SIZE))){
+				errprint("error reading encryptedKey for keyslot: %d\n",i);
+				exit(EXIT_FAILURE);
+			}
+		}
 	}
+	
 
 	return 1;
 }
